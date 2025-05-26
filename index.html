@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategic Planning Application</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/prop-types@15.7.2/prop-types.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/umd/Recharts.min.js"></script>
+    <script src="https://unpkg.com/@material-ui/core@4.12.4/umd/material-ui.development.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+        .strategic-planning-suite {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #2a4365;
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            background-color: #edf2f7;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .nav-tabs button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-tabs button.bg-blue-600 {
+            background-color: #3182ce;
+            color: white;
+            box-shadow: 0 2px 8px rgba(49, 130, 206, 0.3);
+        }
+        .nav-tabs button:hover:not(.bg-blue-600) {
+            background-color: #e2e8f0;
+            color: #2d3748;
+        }
+        .tab-content {
+            padding: 30px;
+        }
+        .form-section {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-field:focus {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+            outline: none;
+        }
+        .button-primary {
+            background-color: #3182ce;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .button-primary:hover {
+            background-color: #2b6cb0;
+        }
+        .button-secondary {
+            background-color: #e2e8f0;
+            color: #2d3748;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .button-secondary:hover {
+            background-color: #cbd5e0;
+        }
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #f7fafc;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .collapsible-header:hover {
+            background-color: #edf2f7;
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .collapsible-content.open {
+            max-height: 1000px; /* Arbitrarily large value to allow content to expand */
+            transition: max-height 0.5s ease-in;
+        }
+        .collapsible-content-inner {
+            padding: 20px;
+        }
+        .gut-score-critical {
+            background-color: #f56565; /* Red-500 */
+            color: white;
+        }
+        .gut-score-high {
+            background-color: #f6ad55; /* Orange-400 */
+            color: white;
+        }
+        .gut-score-medium {
+            background-color: #ecc94b; /* Yellow-400 */
+            color: #333;
+        }
+        .gut-score-low {
+            background-color: #68d391; /* Green-400 */
+            color: white;
+        }
+        .risk-high {
+            background-color: #e53e3e; /* Red-600 */
+            color: white;
+        }
+        .risk-medium {
+            background-color: #dd6b20; /* Orange-600 */
+            color: white;
+        }
+        .risk-low {
+            background-color: #38a169; /* Green-600 */
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="artifact_react"></div>
+    <div id="error-container"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const companySuggestions = [
+            'Apple Inc.', 'Microsoft Corporation', 'Amazon.com Inc.', 'Alphabet Inc.', 'Tesla Inc.',
+            'Meta Platforms Inc.', 'Netflix Inc.', 'Salesforce Inc.', 'Adobe Inc.', 'Oracle Corporation',
+            'Commonwealth Bank of Australia', 'Westpac Banking Corporation', 'ANZ Banking Group',
+            'National Australia Bank', 'Telstra Corporation', 'BHP Group', 'CSL Limited',
+            'Woolworths Group', 'Wesfarmers Limited', 'Macquarie Group', 'Atlassian Corporation',
+            'Toyota Motor Corporation', 'Samsung Electronics Co. Ltd.', 'Sony Group Corporation',
+            'General Motors', 'Ford Motor Company', 'Volkswagen AG', 'Nestlé S.A.', 'Procter & Gamble',
+            'Johnson & Johnson', 'Pfizer Inc.', 'Novartis AG', 'Roche Holding AG', 'JPMorgan Chase & Co.',
+            'Bank of America', 'Citigroup Inc.', 'HSBC Holdings plc', 'Industrial and Commercial Bank of China'
+        ];
+
+        const industrySuggestions = [
+            "Technology", "Healthcare", "Finance", "Retail", "Automotive", "Energy", "Telecommunications",
+            "Consumer Goods", "Manufacturing", "Aerospace & Defense", "Utilities", "Real Estate",
+            "Transportation", "Hospitality", "Media & Entertainment", "Education", "Construction",
+            "Agriculture", "Pharmaceuticals", "Biotechnology", "Food & Beverage", "Chemicals",
+            "Metals & Mining", "Textiles", "Logistics", "Consulting", "Marketing", "Advertising",
+            "Software", "Hardware", "Semiconductors", "E-commerce", "Fintech", "Biotech", "Medtech",
+            "Renewable Energy", "Oil & Gas", "Electric Utilities", "Water Utilities", "Waste Management",
+            "Commercial Banking", "Investment Banking", "Asset Management", "Insurance", "Brokerage",
+            "Residential Real Estate", "Commercial Real Estate", "Industrial Real Estate",
+            "Airlines", "Railways", "Shipping", "Trucking", "Public Transportation",
+            "Hotels", "Restaurants", "Travel Agencies", "Theme Parks", "Casinos",
+            "Film Production", "Music Industry", "Publishing", "Broadcasting", "Gaming",
+            "K-12 Education", "Higher Education", "Vocational Training", "E-learning",
+            "Residential Construction", "Commercial Construction", "Heavy Construction",
+            "Crop Production", "Livestock", "Fishing", "Forestry",
+            "Specialty Chemicals", "Commodity Chemicals", "Industrial Gases", "Paints & Coatings",
+            "Precious Metals", "Industrial Metals", "Coal", "Iron Ore",
+            "Apparel", "Footwear", "Home Furnishings", "Luxury Goods",
+            "Freight Forwarding", "Warehousing", "Courier Services", "Supply Chain Management"
+        ];
+
+        function App() {
+            const [currentPhase, setCurrentPhase] = useState('company-info');
+            const [companyData, setCompanyData] = useState({
+                name: '',
+                industry: '',
+                primaryMarket: '',
+                businessModel: '',
+                size: '',
+                revenue: '',
+                description: '',
+                foundedYear: '',
+                headquarters: '',
+                website: '',
+                keyProducts: [],
+                missionStatement: '',
+                visionStatement: '',
+                coreValues: [],
+                keyExecutives: []
+            });
+
+            const [companyPestelData, setCompanyPestelData] = useState({
+                political: { factors: [], isCollapsed: false },
+                economic: { factors: [], isCollapsed: false },
+                social: { factors: [], isCollapsed: false },
+                technological: { factors: [], isCollapsed: false },
+                environmental: { factors: [], isCollapsed: false },
+                legal: { factors: [], isCollapsed: false }
+            });
+
+            const [productPestels, setProductPestels] = useState({});
+            const [selectedPestelScope, setSelectedPestelScope] = useState('company'); // 'company' or product name
+            const [editingFactor, setEditingFactor] = useState(null);
+
+            const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
+            const [filteredCompanySuggestions, setFilteredCompanySuggestions] = useState([]);
+            const companyNameRef = useRef(null);
+
+            const [showIndustrySuggestions, setShowIndustrySuggestions] = useState(false);
+            const [filteredIndustrySuggestions, setFilteredIndustrySuggestions] = useState([]);
+            const industryRef = useRef(null);
+
+            const [competitors, setCompetitors] = useState([]);
+            const [portersForces, setPortersForces] = useState({
+                threatOfNewEntrants: '',
+                bargainingPowerOfBuyers: '',
+                bargainingPowerOfSuppliers: '',
+                threatOfSubstituteProductsOrServices: '',
+                rivalryAmongExistingCompetitors: '',
+                relativePowerOfNewComplementors: ''
+            });
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (companyNameRef.current && !companyNameRef.current.contains(event.target)) {
+                        setShowCompanySuggestions(false);
+                    }
+                    if (industryRef.current && !industryRef.current.contains(event.target)) {
+                        setShowIndustrySuggestions(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => {
+                    document.removeEventListener('mousedown', handleClickOutside);
+                };
+            }, []);
+
+            useEffect(() => {
+                // Auto-populate Porter's Forces when industry or primary market changes
+                if (companyData.industry || companyData.primaryMarket) {
+                    setPortersForces(generatePortersForces(companyData.industry, companyData.primaryMarket));
+                }
+            }, [companyData.industry, companyData.primaryMarket]);
+
+
+            const phases = [
+                { id: 'company-info', name: 'Company Info', icon: 'fas fa-building' },
+                { id: 'pestel', name: 'PESTEL Analysis', icon: 'fas fa-globe' },
+                { id: 'porter', name: 'Porter\'s Six Forces', icon: 'fas fa-chess' },
+                { id: 'competitor', name: 'Competitor Analysis', icon: 'fas fa-users' },
+                { id: 'swot', name: 'SWOT Analysis', icon: 'fas fa-chart-line' },
+                { id: 'customer', name: 'Customer Segmentation', icon: 'fas fa-user-friends' },
+                { id: 'integration', name: 'Integration & Insights', icon: 'fas fa-link' }
+            ];
+
+            const initializeProductPestel = (productName) => {
+                if (!productPestels[productName]) {
+                    const initialProductPestel = {};
+                    Object.entries(companyPestelData).forEach(([category, data]) => {
+                        initialProductPestel[category] = {
+                            factors: data.factors.map(factor => ({ ...factor })),
+                            isCollapsed: false
+                        };
+                    });
+                    setProductPestels(prev => ({
+                        ...prev,
+                        [productName]: initialProductPestel
+                    }));
+                }
+            };
+
+            const handleCompanyNameChange = (value) => {
+                setCompanyData(prev => ({ ...prev, name: value }));
+                if (value.length > 0) {
+                    const filtered = companySuggestions.filter(company =>
+                        company.toLowerCase().includes(value.toLowerCase())
+                    );
+                    setFilteredCompanySuggestions(filtered);
+                    setShowCompanySuggestions(filtered.length > 0);
+                } else {
+                    setShowCompanySuggestions(false);
+                    setFilteredCompanySuggestions([]);
+                }
+            };
+
+            const selectCompanySuggestion = (company) => {
+                setCompanyData(prev => ({ ...prev, name: company }));
+                setShowCompanySuggestions(false);
+                setFilteredCompanySuggestions([]);
+            };
+
+            const handleIndustryChange = (value) => {
+                setCompanyData(prev => ({ ...prev, industry: value }));
+                if (value.length > 0) {
+                    const filtered = industrySuggestions.filter(industry =>
+                        industry.toLowerCase().includes(value.toLowerCase())
+                    );
+                    setFilteredIndustrySuggestions(filtered);
+                    setShowIndustrySuggestions(filtered.length > 0);
+                } else {
+                    setShowIndustrySuggestions(false);
+                    setFilteredIndustrySuggestions([]);
+                }
+            };
+
+            const selectIndustrySuggestion = (industry) => {
+                setCompanyData(prev => ({ ...prev, industry: industry }));
+                setShowIndustrySuggestions(false);
+                setFilteredIndustrySuggestions([]);
+            };
+
+            const addArrayItem = (setter, currentArray, newItem, fieldName) => {
+                if (newItem.trim()) {
+                    const newArray = [...currentArray, newItem.trim()];
+                    setter(prev => ({ ...prev, [fieldName]: newArray }));
+
+                    if (fieldName === 'keyProducts') {
+                        initializeProductPestel(newItem.trim());
+                    }
+                }
+            };
+
+            const removeArrayItem = (setter, currentArray, index, fieldName) => {
+                const itemToRemove = currentArray[index];
+                const newArray = currentArray.filter((_, i) => i !== index);
+                setter(prev => ({ ...prev, [fieldName]: newArray }));
+
+                if (fieldName === 'keyProducts') {
+                    setProductPestels(prev => {
+                        const updated = { ...prev };
+                        delete updated[itemToRemove];
+                        return updated;
+                    });
+                    if (selectedPestelScope === itemToRemove) {
+                        setSelectedPestelScope('company');
+                    }
+                }
+            };
+
+            const researchCompany = async () => {
+                const companyName = companyData.name.trim();
+                if (!companyName) {
+                    alert('Please enter a company name first');
+                    return;
+                }
+
+                try {
+                    setCompanyData(prev => ({ ...prev, description: '🔍 Researching company information...' }));
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate delay
+
+                    const researchedData = generateCompanyData(companyName);
+                    const companyPestelAnalysis = generateCompanyPestelData(companyName, researchedData.industry);
+                    const generatedCompetitors = generateCompetitors(companyName);
+                    const generatedPortersForces = generatePortersForces(researchedData.industry, researchedData.primaryMarket);
+
+                    setCompanyData(prev => ({
+                        ...prev,
+                        ...researchedData,
+                        name: companyName // Ensure the original name is kept
+                    }));
+                    setCompanyPestelData(companyPestelAnalysis);
+                    setCompetitors(generatedCompetitors);
+                    setPortersForces(generatedPortersForces);
+
+                    const newProductPestels = {};
+                    researchedData.keyProducts.forEach(product => {
+                        const initialProductPestel = {};
+                        Object.entries(companyPestelAnalysis).forEach(([category, data]) => {
+                            initialProductPestel[category] = {
+                                factors: data.factors.map(factor => ({ ...factor })),
+                                isCollapsed: false
+                            };
+                        });
+                        newProductPestels[product] = initialProductPestel;
+                    });
+                    setProductPestels(newProductPestels);
+
+                    alert(`✅ Research completed! Found comprehensive information for ${companyName}.`);
+
+                } catch (error) {
+                    console.error('Research error:', error);
+                    alert('❌ Research failed. Please try again or enter information manually.');
+                    setCompanyData(prev => ({ ...prev, description: '' }));
+                }
+            };
+
+            const generateCompanyData = (companyName) => {
+                const industries = ['Technology', 'Healthcare', 'Finance', 'Retail', 'Manufacturing', 'Education'];
+                const markets = ['Australia', 'United States', 'Global', 'Asia-Pacific', 'Europe'];
+                const businessModels = ['B2B', 'B2C', 'SaaS', 'E-commerce', 'Marketplace'];
+                const sizes = ['startup', 'small', 'medium', 'large', 'enterprise'];
+
+                const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+                const currentYear = new Date().getFullYear();
+
+                return {
+                    industry: randomChoice(industries),
+                    primaryMarket: randomChoice(markets),
+                    businessModel: randomChoice(businessModels),
+                    size: randomChoice(sizes),
+                    revenue: `$${Math.floor(Math.random() * 1000) + 10}M`,
+                    foundedYear: (currentYear - Math.floor(Math.random() * 30) - 5).toString(),
+                    headquarters: `${randomChoice(['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'San Francisco', 'New York'])}, ${randomChoice(['Australia', 'USA', 'UK'])}`,
+                    website: `https://www.${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+                    description: `${companyName} is a leading company in the ${randomChoice(industries).toLowerCase()} sector, providing innovative solutions to customers worldwide.`,
+                    missionStatement: `To deliver exceptional value through innovative ${randomChoice(['products', 'services', 'solutions'])} that transform how businesses operate.`,
+                    visionStatement: `To be the global leader in ${randomChoice(['innovation', 'customer satisfaction', 'sustainable growth'])}, setting new standards for excellence.`,
+                    keyProducts: [
+                        `${companyName} Core Platform`,
+                        `${companyName} Analytics Suite`,
+                        `${companyName} Mobile Application`,
+                        `${companyName} Professional Services`
+                    ],
+                    coreValues: ['Innovation', 'Integrity', 'Customer Focus', 'Excellence', 'Collaboration'],
+                    keyExecutives: [
+                        'John Smith - Chief Executive Officer',
+                        'Sarah Johnson - Chief Technology Officer',
+                        'Michael Brown - Chief Financial Officer',
+                        'Emily Davis - Chief Operating Officer'
+                    ]
+                };
+            };
+
+            const generateCompanyPestelData = (companyName, industry) => {
+                const pestelFactors = {
+                    political: [
+                        { name: 'Government regulations in ' + industry, gravity: 4, urgency: 3, tendency: 3, description: '' },
+                        { name: 'Political stability in key markets', gravity: 3, urgency: 2, tendency: 4, description: '' },
+                    ],
+                    economic: [
+                        { name: 'Economic growth in target markets', gravity: 4, urgency: 4, tendency: 3, description: '' },
+                        { name: 'Interest rate fluctuations', gravity: 3, urgency: 3, tendency: 4, description: '' },
+                    ],
+                    social: [
+                        { name: 'Changing consumer preferences', gravity: 4, urgency: 4, tendency: 4, description: '' },
+                        { name: 'Demographic shifts', gravity: 3, urgency: 2, tendency: 4, description: '' },
+                    ],
+                    technological: [
+                        { name: 'AI and automation adoption', gravity: 5, urgency: 5, tendency: 5, description: '' },
+                        { name: 'Cybersecurity threats', gravity: 4, urgency: 5, tendency: 4, description: '' },
+                    ],
+                    environmental: [
+                        { name: 'Climate change regulations', gravity: 4, urgency: 4, tendency: 5, description: '' },
+                        { name: 'Sustainability requirements', gravity: 4, urgency: 3, tendency: 4, description: '' },
+                    ],
+                    legal: [
+                        { name: 'Data protection laws (GDPR, CCPA)', gravity: 5, urgency: 5, tendency: 4, description: '' },
+                        { name: 'Industry-specific regulations', gravity: 4, urgency: 4, tendency: 3, description: '' },
+                    ]
+                };
+
+                return {
+                    political: { factors: pestelFactors.political, isCollapsed: false },
+                    economic: { factors: pestelFactors.economic, isCollapsed: false },
+                    social: { factors: pestelFactors.social, isCollapsed: false },
+                    technological: { factors: pestelFactors.technological, isCollapsed: false },
+                    environmental: { factors: pestelFactors.environmental, isCollapsed: false },
+                    legal: { factors: pestelFactors.legal, isCollapsed: false }
+                };
+            };
+
+            const generateCompetitors = (companyName) => {
+                // This would involve a real web search in a production environment
+                const lowerCaseCompany = companyName.toLowerCase();
+                if (lowerCaseCompany.includes("apple")) {
+                    return ["Samsung Electronics", "Google (Pixel)", "Huawei", "Xiaomi", "Microsoft (Surface)", "HP", "Dell", "Lenovo", "Sony", "LG", "OnePlus", "Asus", "Acer", "Razer", "HTC", "Motorola", "Nokia", "BlackBerry", "Fujitsu", "Panasonic"];
+                } else if (lowerCaseCompany.includes("microsoft")) {
+                    return ["Google", "Amazon (AWS)", "Apple", "Salesforce", "Oracle", "IBM", "SAP", "Adobe", "Workday", "ServiceNow", "VMware", "Red Hat", "Cisco", "Dell Technologies", "HP Inc.", "Lenovo", "Samsung", "Sony", "Nintendo", "Activision Blizzard"];
+                }
+                return [
+                    "Competitor A Corp.", "Competitor B Ltd.", "Competitor C Inc.", "Competitor D Group",
+                    "Competitor E Solutions", "Competitor F Innovations", "Competitor G Global",
+                    "Competitor H Systems", "Competitor I Enterprises", "Competitor J Holdings",
+                    "Competitor K Dynamics", "Competitor L Industries", "Competitor M Ventures",
+                    "Competitor N Tech", "Competitor O Services", "Competitor P Corp.",
+                    "Competitor Q Ltd.", "Competitor R Inc.", "Competitor S Group", "Competitor T Solutions"
+                ];
+            };
+
+            const generatePortersForces = (industry, primaryMarket) => {
+                const lowerCaseIndustry = industry.toLowerCase();
+                const lowerCaseMarket = primaryMarket.toLowerCase();
+                let forces = {
+                    threatOfNewEntrants: 'Moderate - Capital requirements can be high, but digital disruption lowers barriers.',
+                    bargainingPowerOfBuyers: 'High - Buyers have many choices and access to information.',
+                    bargainingPowerOfSuppliers: 'Moderate - Depends on uniqueness of components/services.',
+                    threatOfSubstituteProductsOrServices: 'High - Technology evolves rapidly, leading to new substitutes.',
+                    rivalryAmongExistingCompetitors: 'Very High - Intense competition, frequent innovation, price wars.',
+                    relativePowerOfNewComplementors: 'High - Complementary products/services (e.g., apps, accessories) enhance value.'
+                };
+
+                if (lowerCaseIndustry.includes("healthcare")) {
+                    forces.threatOfNewEntrants = 'Low - High regulatory hurdles, capital intensity, and specialized knowledge required.';
+                    forces.bargainingPowerOfBuyers = 'Moderate - Patients often rely on insurance/providers, but consumer choice is growing.';
+                    forces.bargainingPowerOfSuppliers = 'High - Specialized medical equipment and pharmaceutical suppliers have strong power.';
+                    forces.threatOfSubstituteProductsOrServices = 'Low to Moderate - Alternatives exist (e.g., preventative care vs. treatment), but direct substitutes for critical care are limited.';
+                    forces.rivalryAmongExistingCompetitors = 'Moderate to High - Competition among hospitals, clinics, and pharma companies, but often localized or specialized.';
+                    forces.relativePowerOfNewComplementors = 'Moderate - Telemedicine platforms, health tech apps, and diagnostic tools enhance services.';
+                } else if (lowerCaseIndustry.includes("finance")) {
+                    forces.threatOfNewEntrants = 'Moderate to High - Fintech startups are lowering barriers, but regulatory burden remains high for traditional banking.';
+                    forces.bargainingPowerOfBuyers = 'High - Customers can easily switch banks/financial providers due to low switching costs and digital options.';
+                    forces.bargainingPowerOfSuppliers = 'Moderate - Technology providers, data services, and interbank networks hold some power.';
+                    forces.threatOfSubstituteProductsOrServices = 'High - Cryptocurrencies, peer-to-peer lending, and alternative investment platforms pose significant threats.';
+                    forces.rivalryAmongExistingCompetitors = 'Very High - Intense competition among banks, investment firms, and fintechs, often leading to aggressive marketing and product innovation.';
+                    forces.relativePowerOfNewComplementors = 'High - Payment gateways, financial planning software, and data analytics tools are crucial for modern financial services.';
+                } else if (lowerCaseIndustry.includes("retail")) {
+                    forces.threatOfNewEntrants = 'High - Low barriers to entry for online retail, but physical retail requires significant capital.';
+                    forces.bargainingPowerOfBuyers = 'Very High - Consumers have vast choices, price transparency, and low switching costs.';
+                    forces.bargainingPowerOfSuppliers = 'Moderate - Large retailers have significant power, but unique brands can command higher prices.';
+                    forces.threatOfSubstituteProductsOrServices = 'High - E-commerce, direct-to-consumer brands, and sharing economy models are strong substitutes.';
+                    forces.rivalryAmongExistingCompetitors = 'Very High - Intense price competition, constant innovation in customer experience, and rapid trend changes.';
+                    forces.relativePowerOfNewComplementors = 'High - Payment solutions, logistics providers, and marketing platforms are essential for retail success.';
+                }
+
+                // Adjust based on primary market if specific data is available
+                if (lowerCaseMarket.includes("australia")) {
+                    if (lowerCaseIndustry.includes("finance")) {
+                        forces.threatOfNewEntrants += ' (Australia: Strong regulatory oversight, but fintech growth is notable).';
+                        forces.rivalryAmongExistingCompetitors += ' (Australia: Dominated by major banks, but increasing competition from smaller players).';
+                    }
+                } else if (lowerCaseMarket.includes("united-states")) {
+                    if (lowerCaseIndustry.includes("technology")) {
+                        forces.threatOfNewEntrants += ' (USA: High innovation, but strong incumbents).';
+                        forces.rivalryAmongExistingCompetitors += ' (USA: Global tech giants lead to fierce competition).';
+                    }
+                }
+
+                return forces;
+            };
+
+            const calculateGUTScore = (factor) => {
+                return factor.gravity * factor.urgency * factor.tendency;
+            };
+
+            const getGUTScoreColor = (score) => {
+                if (score >= 80) return 'gut-score-critical'; // Very high risk
+                if (score >= 40) return 'gut-score-high';
+                if (score >= 20) return 'gut-score-medium';
+                return 'gut-score-low';
+            };
+
+            const addEnhancedFactor = (category, factorData, isProductSpecific = false, productName = '') => {
+                const newFactor = {
+                    name: factorData.name || '',
+                    gravity: factorData.gravity || 3,
+                    urgency: factorData.urgency || 3,
+                    tendency: factorData.tendency || 3,
+                    description: factorData.description || ''
+                };
+
+                if (isProductSpecific && productName) {
+                    setProductPestels(prev => ({
+                        ...prev,
+                        [productName]: {
+                            ...prev[productName],
+                            [category]: {
+                                ...prev[productName][category],
+                                factors: [...prev[productName][category].factors, newFactor]
+                            }
+                        }
+                    }));
+                } else {
+                    setCompanyPestelData(prev => ({
+                        ...prev,
+                        [category]: {
+                            ...prev[category],
+                            factors: [...prev[category].factors, newFactor]
+                        }
+                    }));
+                }
+            };
+
+            const updateFactor = (category, index, updatedFactor, isProductSpecific = false, productName = '') => {
+                if (isProductSpecific && productName) {
+                    const updatedFactors = [...productPestels[productName][category].factors];
+                    updatedFactors[index] = updatedFactor;
+
+                    setProductPestels(prev => ({
+                        ...prev,
+                        [productName]: {
+                            ...prev[productName],
+                            [category]: {
+                                ...prev[productName][category],
+                                factors: updatedFactors
+                            }
+                        }
+                    }));
+                } else {
+                    const updatedFactors = [...companyPestelData[category].factors];
+                    updatedFactors[index] = updatedFactor;
+
+                    setCompanyPestelData(prev => ({
+                        ...prev,
+                        [category]: {
+                            ...prev[category],
+                            factors: updatedFactors
+                        }
+                    }));
+                }
+            };
+
+            const removeFactor = (category, index, isProductSpecific = false, productName = '') => {
+                if (isProductSpecific && productName) {
+                    const updatedFactors = productPestels[productName][category].factors.filter((_, i) => i !== index);
+                    setProductPestels(prev => ({ ...prev, [productName]: { ...prev[productName], [category]: { ...prev[productName][category], factors: updatedFactors } } }));
+                } else {
+                    const updatedFactors = companyPestelData[category].factors.filter((_, i) => i !== index);
+                    setCompanyPestelData(prev => ({ ...prev, [category]: { ...prev[category], factors: updatedFactors } }));
+                }
+            };
+
+            const toggleCategoryCollapse = (category, isProductSpecific = false, productName = '') => {
+                if (isProductSpecific && productName) {
+                    setProductPestels(prev => ({
+                        ...prev,
+                        [productName]: {
+                            ...prev[productName],
+                            [category]: {
+                                ...prev[productName][category],
+                                isCollapsed: !prev[productName][category].isCollapsed
+                            }
+                        }
+                    }));
+                } else {
+                    setCompanyPestelData(prev => ({
+                        ...prev,
+                        [category]: {
+                            ...prev[category],
+                            isCollapsed: !prev[category].isCollapsed
+                        }
+                    }));
+                }
+            };
+
+            const calculateProductRiskScore = (productName) => {
+                if (!productPestels[productName]) return 0;
+
+                let totalScore = 0;
+                let factorCount = 0;
+
+                Object.values(productPestels[productName]).forEach(category => {
+                    if (category.factors) {
+                        category.factors.forEach(factor => {
+                            totalScore += calculateGUTScore(factor);
+                            factorCount++;
+                        });
+                    }
+                });
+
+                // Normalize to 0-5 scale, assuming max GUT score for one factor is 125 (5*5*5)
+                // If there are 6 categories * 2 factors = 12 factors, max total score = 12 * 125 = 1500
+                // So, (totalScore / 1500) * 5
+                const maxPossibleScore = Object.values(productPestels[productName]).reduce((sum, cat) => sum + (cat.factors ? cat.factors.length : 0), 0) * 125;
+
+                if (maxPossibleScore === 0) return 0; // Avoid division by zero
+
+                return Math.round((totalScore / maxPossibleScore) * 5);
+            };
+
+            const getProductRiskLevel = (productName) => {
+                const score = calculateProductRiskScore(productName);
+                if (score >= 4) return { level: 'high', color: 'risk-high', label: 'High Risk' };
+                if (score >= 3) return { level: 'medium-high', color: 'risk-medium', label: 'Medium Risk' }; // Using medium for 3-4 range
+                if (score >= 2) return { level: 'medium', color: 'risk-medium', label: 'Medium Risk' };
+                if (score >= 1) return { level: 'low', color: 'risk-low', label: 'Low Risk' };
+                return { level: 'minimal', color: 'text-gray-600 bg-gray-100', label: 'No Analysis Yet' };
+            };
+
+            const renderCompanyInfo = () => {
+                const getCompletionPercentage = () => {
+                    const requiredFields = ['name', 'industry', 'primaryMarket', 'businessModel'];
+                    const optionalFields = ['size', 'revenue', 'description', 'foundedYear', 'headquarters', 'website'];
+
+                    const requiredCompleted = requiredFields.filter(field => companyData[field]).length;
+                    const optionalCompleted = optionalFields.filter(field => companyData[field]).length;
+                    const arrayFieldsCompleted = (companyData.keyProducts.length > 0 ? 1 : 0) +
+                                                   (companyData.coreValues.length > 0 ? 1 : 0);
+
+                    const totalCompleted = requiredCompleted + optionalCompleted + arrayFieldsCompleted;
+                    const totalFields = requiredFields.length + optionalFields.length + 2;
+
+                    return Math.round((totalCompleted / totalFields) * 100);
+                };
+
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold">Company Information</h3>
+                                    <p className="text-blue-100">Build your company profile for strategic analysis</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-bold">{getCompletionPercentage()}%</div>
+                                    <div className="text-sm text-blue-100">Complete</div>
+                                </div>
+                            </div>
+                            <div className="w-full bg-blue-400 rounded-full h-2">
+                                <div
+                                    className="bg-white h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${getCompletionPercentage()}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div className="form-section">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-lg font-semibold text-gray-800">Basic Information</h4>
+                                <button
+                                    onClick={researchCompany}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                                    disabled={!companyData.name}
+                                >
+                                    <i className="fas fa-search"></i>
+                                    Research Company
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="md:col-span-2 relative" ref={companyNameRef}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Company Name * <span className="text-red-500">Required</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={companyData.name}
+                                        onChange={(e) => handleCompanyNameChange(e.target.value)}
+                                        onFocus={() => {
+                                            if (companyData.name.length > 0) {
+                                                const filtered = companySuggestions.filter(company =>
+                                                    company.toLowerCase().includes(companyData.name.toLowerCase())
+                                                );
+                                                setFilteredCompanySuggestions(filtered);
+                                                setShowCompanySuggestions(filtered.length > 0);
+                                            }
+                                        }}
+                                        className="input-field"
+                                        placeholder="Enter company name..."
+                                        required
+                                    />
+                                    {showCompanySuggestions && filteredCompanySuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                            {filteredCompanySuggestions.slice(0, 8).map((suggestion, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => selectCompanySuggestion(suggestion)}
+                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                                >
+                                                    <div className="font-medium text-gray-800">{suggestion}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Founded Year</label>
+                                    <input
+                                        type="number"
+                                        value={companyData.foundedYear}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, foundedYear: e.target.value }))}
+                                        className="input-field"
+                                        placeholder="e.g., 2010"
+                                        min="1800"
+                                        max={new Date().getFullYear()}
+                                    />
+                                </div>
+
+                                <div ref={industryRef}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Industry *</label>
+                                    <input
+                                        type="text"
+                                        value={companyData.industry}
+                                        onChange={(e) => handleIndustryChange(e.target.value)}
+                                        onFocus={() => {
+                                            if (companyData.industry.length > 0) {
+                                                const filtered = industrySuggestions.filter(industry =>
+                                                    industry.toLowerCase().includes(companyData.industry.toLowerCase())
+                                                );
+                                                setFilteredIndustrySuggestions(filtered);
+                                                setShowIndustrySuggestions(filtered.length > 0);
+                                            }
+                                        }}
+                                        className="input-field"
+                                        placeholder="Enter industry..."
+                                        required
+                                    />
+                                    {showIndustrySuggestions && filteredIndustrySuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                            {filteredIndustrySuggestions.slice(0, 8).map((suggestion, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => selectIndustrySuggestion(suggestion)}
+                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                                >
+                                                    <div className="font-medium text-gray-800">{suggestion}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Primary Market *</label>
+                                    <select
+                                        value={companyData.primaryMarket}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, primaryMarket: e.target.value }))}
+                                        className="input-field"
+                                        required
+                                    >
+                                        <option value="">Select Primary Market</option>
+                                        <option value="australia">Australia</option>
+                                        <option value="united-states">United States</option>
+                                        <option value="global">Global</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Business Model *</label>
+                                    <select
+                                        value={companyData.businessModel}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, businessModel: e.target.value }))}
+                                        className="input-field"
+                                        required
+                                    >
+                                        <option value="">Select Business Model</option>
+                                        <option value="b2b">B2B (Business to Business)</option>
+                                        <option value="b2c">B2C (Business to Consumer)</option>
+                                        <option value="saas">SaaS (Software as a Service)</option>
+                                        <option value="e-commerce">E-commerce</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Size</label>
+                                    <select
+                                        value={companyData.size}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, size: e.target.value }))}
+                                        className="input-field"
+                                    >
+                                        <option value="">Select Size</option>
+                                        <option value="startup">Startup (1-10 employees)</option>
+                                        <option value="small">Small (11-50 employees)</option>
+                                        <option value="medium">Medium (51-200 employees)</option>
+                                        <option value="large">Large (201-1000 employees)</option>
+                                        <option value="enterprise">Enterprise (1000+ employees)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Annual Revenue</label>
+                                    <input
+                                        type="text"
+                                        value={companyData.revenue}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, revenue: e.target.value }))}
+                                        className="input-field"
+                                        placeholder="e.g., \$10M, \$100M, \$1B"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Headquarters</label>
+                                    <input
+                                        type="text"
+                                        value={companyData.headquarters}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, headquarters: e.target.value }))}
+                                        className="input-field"
+                                        placeholder="City, Country"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                                    <input
+                                        type="url"
+                                        value={companyData.website}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, website: e.target.value }))}
+                                        className="input-field"
+                                        placeholder="https://www.company.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Company Description</label>
+                                <textarea
+                                    value={companyData.description}
+                                    onChange={(e) => setCompanyData(prev => ({ ...prev, description: e.target.value }))}
+                                    className="input-field"
+                                    rows="4"
+                                    placeholder="Brief description of your company's business model, main activities, and market position..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-section">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4">Products & Services</h4>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Key Products/Services</label>
+                                <div className="space-y-2">
+                                    {companyData.keyProducts.map((product, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <span className="flex-1 p-2 bg-gray-50 rounded border">{product}</span>
+                                            <button
+                                                onClick={() => removeArrayItem(setCompanyData, companyData.keyProducts, index, 'keyProducts')}
+                                                className="text-red-500 hover:text-red-700 p-2"
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <input
+                                        type="text"
+                                        placeholder="Add product or service..."
+                                        className="input-field"
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                addArrayItem(setCompanyData, companyData.keyProducts, e.target.value, 'keyProducts');
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-section">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4">Mission, Vision & Values</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Mission Statement</label>
+                                    <textarea
+                                        value={companyData.missionStatement}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, missionStatement: e.target.value }))}
+                                        className="input-field"
+                                        rows="3"
+                                        placeholder="What is your company's purpose and primary objectives?"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Vision Statement</label>
+                                    <textarea
+                                        value={companyData.visionStatement}
+                                        onChange={(e) => setCompanyData(prev => ({ ...prev, visionStatement: e.target.value }))}
+                                        className="input-field"
+                                        rows="3"
+                                        placeholder="What does your company aspire to become in the future?"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Core Values</label>
+                                    <div className="space-y-2">
+                                        {companyData.coreValues.map((value, index) => (
+                                            <div key={index} className="flex items-center gap-2">
+                                                <span className="flex-1 p-2 bg-gray-50 rounded border">{value}</span>
+                                                <button
+                                                    onClick={() => removeArrayItem(setCompanyData, companyData.coreValues, index, 'coreValues')}
+                                                    className="text-red-500 hover:text-red-700 p-2"
+                                                >
+                                                    <i className="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <input
+                                            type="text"
+                                            placeholder="Add core value..."
+                                            className="input-field"
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    addArrayItem(setCompanyData, companyData.coreValues, e.target.value, 'coreValues');
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-section">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4">Leadership</h4>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Key Executives</label>
+                                <div className="space-y-2">
+                                    {companyData.keyExecutives.map((executive, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <span className="flex-1 p-2 bg-gray-50 rounded border text-sm">{executive}</span>
+                                            <button
+                                                onClick={() => removeArrayItem(setCompanyData, companyData.keyExecutives, index, 'keyExecutives')}
+                                                className="text-red-500 hover:text-red-700 p-2"
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <input
+                                        type="text"
+                                        placeholder="Add executive (Name - Title)..."
+                                        className="input-field"
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                addArrayItem(setCompanyData, companyData.keyExecutives, e.target.value, 'keyExecutives');
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderPestelAnalysis = () => {
+                const currentPestelData = selectedPestelScope === 'company' ? companyPestelData : productPestels[selectedPestelScope];
+                const isProductSpecificView = selectedPestelScope !== 'company';
+
+                const renderPestelFactors = (pestelData, isProductSpecific = false, productName = '') => {
+                    return Object.entries(pestelData).map(([category, data]) => (
+                        <div key={category} className="mb-6 border border-gray-200 rounded-lg">
+                            <div
+                                className="collapsible-header"
+                                onClick={() => toggleCategoryCollapse(category, isProductSpecific, productName)}
+                            >
+                                <h4 className="font-semibold text-gray-800 capitalize">{category} Factors</h4>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">
+                                        {data.factors.length} factor{data.factors.length !== 1 ? 's' : ''}
+                                    </span>
+                                    <i className={`fas ${data.isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}`}></i>
+                                </div>
+                            </div>
+
+                            <div className={`collapsible-content ${data.isCollapsed ? '' : 'open'}`}>
+                                <div className="collapsible-content-inner">
+                                    <div className="mb-4">
+                                        <button
+                                            onClick={() => addEnhancedFactor(category, { name: `New ${category} factor` }, isProductSpecific, productName)}
+                                            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                                        >
+                                            <i className="fas fa-plus mr-1"></i>Add Factor
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {data.factors.map((factor, index) => {
+                                            const gutScore = calculateGUTScore(factor);
+                                            const isEditing = editingFactor === `${productName || 'company'}-${category}-${index}`;
+
+                                            return (
+                                                <div key={index} className="border border-gray-200 rounded p-3">
+                                                    {isEditing ? (
+                                                        <div className="space-y-3">
+                                                            <input
+                                                                type="text"
+                                                                value={factor.name}
+                                                                onChange={(e) => updateFactor(category, index, { ...factor, name: e.target.value }, isProductSpecific, productName)}
+                                                                className="input-field"
+                                                                placeholder="Factor name..."
+                                                            />
+                                                            <textarea
+                                                                value={factor.description}
+                                                                onChange={(e) => updateFactor(category, index, { ...factor, description: e.target.value }, isProductSpecific, productName)}
+                                                                className="input-field"
+                                                                rows="2"
+                                                                placeholder="Detailed description..."
+                                                            ></textarea>
+
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Gravity (1-5)</label>
+                                                                    <select
+                                                                        value={factor.gravity}
+                                                                        onChange={(e) => updateFactor(category, index, { ...factor, gravity: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                                        className="input-field text-sm"
+                                                                    >
+                                                                        {[1, 2, 3, 4, 5].map(n => (
+                                                                            <option key={n} value={n}>{n}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Urgency (1-5)</label>
+                                                                    <select
+                                                                        value={factor.urgency}
+                                                                        onChange={(e) => updateFactor(category, index, { ...factor, urgency: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                                        className="input-field text-sm"
+                                                                    >
+                                                                        {[1, 2, 3, 4, 5].map(n => (
+                                                                            <option key={n} value={n}>{n}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Tendency (1-5)</label>
+                                                                    <select
+                                                                        value={factor.tendency}
+                                                                        onChange={(e) => updateFactor(category, index, { ...factor, tendency: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                                        className="input-field text-sm"
+                                                                    >
+                                                                        {[1, 2, 3, 4, 5].map(n => (
+                                                                            <option key={n} value={n}>{n}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex gap-2 mt-3">
+                                                                <button
+                                                                    onClick={() => setEditingFactor(null)}
+                                                                    className="button-primary"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingFactor(null)}
+                                                                    className="button-secondary"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <h6 className="font-medium text-gray-800">{factor.name}</h6>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${getGUTScoreColor(gutScore)}`}>
+                                                                        G.U.T: {gutScore}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => setEditingFactor(`${productName || 'company'}-${category}-${index}`)}
+                                                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                                                    >
+                                                                        <i className="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => removeFactor(category, index, isProductSpecific, productName)}
+                                                                        className="text-red-600 hover:text-red-800 text-sm"
+                                                                    >
+                                                                        <i className="fas fa-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 mb-2">{factor.description}</p>
+                                                            <div className="grid grid-cols-3 gap-2 text-xs">
+                                                                <div className="bg-gray-50 p-2 rounded">
+                                                                    <div className="font-medium text-gray-600">G: {factor.gravity}</div>
+                                                                </div>
+                                                                <div className="bg-gray-50 p-2 rounded">
+                                                                    <div className="font-medium text-gray-600">U: {factor.urgency}</div>
+                                                                </div>
+                                                                <div className="bg-gray-50 p-2 rounded">
+                                                                    <div className="font-medium text-gray-600">T: {factor.tendency}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ));
+                };
+
+                return (
+                    <div className="space-y-6">
+                        <div className="form-section">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-800">PESTEL Analysis</h3>
+                                    <p className="text-gray-600">Analyze external macro-environmental factors using G.U.T scoring</p>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <label htmlFor="pestel-scope-select" className="text-sm font-medium text-gray-700">View:</label>
+                                    <select
+                                        id="pestel-scope-select"
+                                        value={selectedPestelScope}
+                                        onChange={(e) => setSelectedPestelScope(e.target.value)}
+                                        className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                    >
+                                        <option value="company">Company PESTEL</option>
+                                        {companyData.keyProducts.map((product, index) => (
+                                            <option key={index} value={product}>{product} PESTEL</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {companyData.keyProducts.length === 0 && selectedPestelScope !== 'company' && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                                    <div className="flex">
+                                        <i className="fas fa-exclamation-triangle text-yellow-400 mr-3 mt-1"></i>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-yellow-800">No Products Added</h4>
+                                            <p className="text-sm text-yellow-700 mt-1">
+                                                Add products in the Company Info section to enable product-specific PESTEL analysis.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {selectedPestelScope === 'company' ? (
+                            <div className="form-section">
+                                <div className="mb-4">
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Company-Wide PESTEL Analysis</h4>
+                                    <p className="text-gray-600 text-sm">
+                                        Analyze macro-environmental factors that affect your entire company across all products and services.
+                                    </p>
+                                </div>
+                                {renderPestelFactors(companyPestelData)}
+                            </div>
+                        ) : (
+                            <div className="form-section">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h4 className="text-lg font-semibold text-gray-800">{selectedPestelScope}</h4>
+                                        <p className="text-gray-600">Product-Specific PESTEL Analysis</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className={`inline-block px-3 py-1 rounded text-sm font-bold ${getProductRiskLevel(selectedPestelScope).color}`}>
+                                            {getProductRiskLevel(selectedPestelScope).label}
+                                        </div>
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            Risk Score: {calculateProductRiskScore(selectedPestelScope)}/5
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h5 className="font-semibold text-blue-800 mb-2">
+                                        <i className="fas fa-lightbulb mr-2"></i>
+                                        Analysis Guidance
+                                    </h5>
+                                    <p className="text-sm text-blue-700">
+                                        Focus on factors that specifically impact <strong>{selectedPestelScope}</strong>.
+                                        Consider how each environmental factor affects this product's development, marketing,
+                                        distribution, and customer adoption differently from your other products.
+                                    </p>
+                                </div>
+
+                                {productPestels[selectedPestelScope] ? (
+                                    renderPestelFactors(productPestels[selectedPestelScope], true, selectedPestelScope)
+                                ) : (
+                                    <div className="text-center text-gray-500 py-8">
+                                        <i className="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                        <p>Loading product PESTEL data...</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const renderPortersSixForces = () => {
+                return (
+                    <div className="space-y-6">
+                        <div className="form-section">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Porter's Six Forces Analysis</h3>
+                            <p className="text-gray-600 mb-6">
+                                Analyze the competitive intensity and attractiveness of your industry based on the industry and primary market you entered in Company Info.
+                            </p>
+
+                            {(!companyData.industry && !companyData.primaryMarket) && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                                    <div className="flex">
+                                        <i className="fas fa-exclamation-triangle text-yellow-400 mr-3 mt-1"></i>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-yellow-800">Missing Information</h4>
+                                            <p className="text-sm text-yellow-700 mt-1">
+                                                Please fill in the "Industry" and "Primary Market" fields in the "Company Info" tab to auto-populate this section.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {Object.entries(portersForces).map(([forceKey, forceDescription]) => (
+                                <div key={forceKey} className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
+                                        {forceKey.replace(/([A-Z])/g, ' \$1').replace('Of', 'of ').replace('Or', 'or ')}
+                                    </label>
+                                    <textarea
+                                        value={forceDescription}
+                                        onChange={(e) => setPortersForces(prev => ({ ...prev, [forceKey]: e.target.value }))}
+                                        className="input-field"
+                                        rows="3"
+                                        placeholder={`Analysis for ${forceKey.replace(/([A-Z])/g, ' \$1').toLowerCase()}...`}
+                                    ></textarea>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderCompetitorAnalysis = () => {
+                const [newCompetitor, setNewCompetitor] = useState('');
+
+                const addCompetitor = () => {
+                    if (newCompetitor.trim() && !competitors.includes(newCompetitor.trim())) {
+                        setCompetitors(prev => [...prev, newCompetitor.trim()]);
+                        setNewCompetitor('');
+                    }
+                };
+
+                const removeCompetitor = (index) => {
+                    setCompetitors(prev => prev.filter((_, i) => i !== index));
+                };
+
+                return (
+                    <div className="space-y-6">
+                        <div className="form-section">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Competitor Analysis</h3>
+                            <p className="text-gray-600 mb-6">
+                                Identify and analyze your key competitors. The list below is pre-populated based on your company name.
+                            </p>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Identified Competitors</label>
+                                <div className="space-y-2">
+                                    {competitors.length === 0 && (
+                                        <p className="text-gray-500 text-sm">No competitors identified yet. Research your company in the "Company Info" tab.</p>
+                                    )}
+                                    {competitors.map((competitor, index) => (
+                                        <div key={index} className="flex items-center gap-2 bg-gray-50 p-2 rounded border">
+                                            <span className="flex-1 text-gray-800">{competitor}</span>
+                                            <button
+                                                onClick={() => removeCompetitor(index)}
+                                                className="text-red-500 hover:text-red-700 p-1"
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Add New Competitor Manually</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newCompetitor}
+                                        onChange={(e) => setNewCompetitor(e.target.value)}
+                                        className="input-field flex-1"
+                                        placeholder="Enter competitor name..."
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                addCompetitor();
+                                            }
+                                        }}
+                                    />
+                                    <button onClick={addCompetitor} className="button-primary">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderOtherPhases = () => (
+                <div className="tab-content">
+                    <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4" role="alert">
+                        <p className="font-bold">Coming Soon!</p>
+                        <p>This section will be implemented in future updates.</p>
+                    </div>
+                </div>
+            );
+
+            const renderCurrentPhase = () => {
+                switch (currentPhase) {
+                    case 'company-info':
+                        return renderCompanyInfo();
+                    case 'pestel':
+                        return renderPestelAnalysis();
+                    case 'porter':
+                        return renderPortersSixForces();
+                    case 'competitor':
+                        return renderCompetitorAnalysis();
+                    default:
+                        return renderOtherPhases();
+                }
+            };
+
+            return (
+                <div className="strategic-planning-suite">
+                    <div className="header">
+                        <h1 className="text-2xl font-bold">Strategic Planning Suite</h1>
+                    </div>
+                    <div className="nav-tabs">
+                        {phases.map((phase) => (
+                            <button
+                                key={phase.id}
+                                onClick={() => setCurrentPhase(phase.id)}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                    currentPhase === phase.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                            >
+                                <i className={`${phase.icon} mr-2`}></i>
+                                {phase.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="tab-content">
+                        {renderCurrentPhase()}
+                    </div>
+                </div>
+            );
+        }
+
+        try {
+            ReactDOM.render(<App />, document.getElementById('artifact_react'));
+        } catch(error) {
+            displayError('An error occurred while loading the application.');
+        }
+        window.addEventListener('error', function(event) {
+            displayError(event.message, event.error?.stack);
+        });
+        function displayError(message, stackInfo) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.createElement('div');
+            errorMessage.textContent = message;
+            errorContainer.appendChild(errorMessage);
+            if(stackInfo) {
+                const stackErrorMessage = document.createElement('pre');
+                stackErrorMessage.textContent = stackInfo.substring(0, 130);
+                errorContainer.appendChild(stackErrorMessage);
+            }
+            errorContainer.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
