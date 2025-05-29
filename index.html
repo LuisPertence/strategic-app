@@ -247,14 +247,39 @@
             const [filteredIndustrySuggestions, setFilteredIndustrySuggestions] = useState([]);
             const industryRef = useRef(null);
 
-            const [competitors, setCompetitors] = useState([]);
+            const [isCompanyNameEditing, setIsCompanyNameEditing] = useState(false);
+            const [isFoundedYearEditing, setIsFoundedYearEditing] = useState(false);
+            const [isIndustryEditing, setIsIndustryEditing] = useState(false);
+            const [isPrimaryMarketEditing, setIsPrimaryMarketEditing] = useState(false);
+            const [isBusinessModelEditing, setIsBusinessModelEditing] = useState(false);
+            const [isSizeEditing, setIsSizeEditing] = useState(false);
+            const [isRevenueEditing, setIsRevenueEditing] = useState(false);
+            const [isHeadquartersEditing, setIsHeadquartersEditing] = useState(false);
+            const [isWebsiteEditing, setIsWebsiteEditing] = useState(false);
+            const [isDescriptionEditing, setIsDescriptionEditing] = useState(false);
+            const [factorFieldEditStates, setFactorFieldEditStates] = useState({}); // For PESTEL factor field editing
+
+            // State for the new editable list UI component (will be used later)
+            // const [customList, setCustomList] = useState([]); 
+
+            const [selectedPortersScope, setSelectedPortersScope] = useState('company');
+            const [productPortersForces, setProductPortersForces] = useState({});
+            const [portersDescriptionEditStates, setPortersDescriptionEditStates] = useState({});
+
+            const [competitors, setCompetitors] = useState([]); // For "Internal Issues" tab
+            const [newCompetitorsList, setNewCompetitorsList] = useState([]); // For "Competitors Analysis" tab
+            
+            const [selectedPersonaScope, setSelectedPersonaScope] = useState('company');
+            const [companyPersonas, setCompanyPersonas] = useState([]);
+            const [productPersonas, setProductPersonas] = useState({});
+
             const [portersForces, setPortersForces] = useState({
-                threatOfNewEntrants: '',
-                bargainingPowerOfBuyers: '',
-                bargainingPowerOfSuppliers: '',
-                threatOfSubstituteProductsOrServices: '',
-                rivalryAmongExistingCompetitors: '',
-                relativePowerOfNewComplementors: ''
+                threatOfNewEntrants: { description: '', gravity: 3, urgency: 3, tendency: 3 },
+                bargainingPowerOfBuyers: { description: '', gravity: 3, urgency: 3, tendency: 3 },
+                bargainingPowerOfSuppliers: { description: '', gravity: 3, urgency: 3, tendency: 3 },
+                threatOfSubstituteProductsOrServices: { description: '', gravity: 3, urgency: 3, tendency: 3 },
+                rivalryAmongExistingCompetitors: { description: '', gravity: 3, urgency: 3, tendency: 3 },
+                relativePowerOfNewComplementors: { description: '', gravity: 3, urgency: 3, tendency: 3 }
             });
 
             useEffect(() => {
@@ -273,17 +298,46 @@
             }, []);
 
             useEffect(() => {
-                // Auto-populate Porter's Forces when industry or primary market changes
+                // Auto-populate COMPANY Porter's Forces when industry or primary market changes
                 if (companyData.industry || companyData.primaryMarket) {
+                    // Only update company-level forces automatically. Product-specific forces are initialized or manually suggested.
                     setPortersForces(generatePortersForces(companyData.industry, companyData.primaryMarket));
                 }
             }, [companyData.industry, companyData.primaryMarket]);
+
+            useEffect(() => {
+                // Initialize product-specific Porter's forces when scope changes to a product
+                // and it hasn't been initialized yet.
+                if (selectedPortersScope !== 'company' && !productPortersForces[selectedPortersScope]) {
+                    console.log(`Initializing Porter's forces for product: ${selectedPortersScope}`);
+                    const companyForcesDeepCopy = JSON.parse(JSON.stringify(portersForces));
+                    setProductPortersForces(prev => ({
+                        ...prev,
+                        [selectedPortersScope]: companyForcesDeepCopy
+                    }));
+                }
+            }, [selectedPortersScope, portersForces, productPortersForces]);
+            
+            useEffect(() => {
+                // Initialize product-specific Personas when scope changes to a product
+                // and it hasn't been initialized yet. Defaults to a copy of company personas or empty array.
+                if (selectedPersonaScope !== 'company' && !productPersonas[selectedPersonaScope]) {
+                    console.log(`Initializing Personas for product: ${selectedPersonaScope}`);
+                    const companyPersonasDeepCopy = companyPersonas.length > 0 ? JSON.parse(JSON.stringify(companyPersonas)) : [];
+                    setProductPersonas(prev => ({
+                        ...prev,
+                        [selectedPersonaScope]: companyPersonasDeepCopy
+                    }));
+                }
+            }, [selectedPersonaScope, companyPersonas, productPersonas]);
 
 
             const phases = [
                 { id: 'company-info', name: 'Company Info', icon: 'fas fa-building' },
                 { id: 'pestel', name: 'PESTEL Analysis', icon: 'fas fa-globe' },
                 { id: 'porter', name: 'Porter\'s Six Forces', icon: 'fas fa-chess' },
+                { id: 'competitors-analysis', name: 'Competitors Analysis', icon: 'fas fa-users-viewfinder' },
+                { id: 'clients-personas', name: 'Clients Personas', icon: 'fas fa-address-book' },
                 { id: 'competitor', name: 'Internal Issues', icon: 'fas fa-users' },
                 { id: 'swot', name: 'SWOT Analysis', icon: 'fas fa-chart-line' },
                 { id: 'customer', name: 'Customer Segmentation', icon: 'fas fa-user-friends' },
@@ -458,33 +512,67 @@
                 };
             };
 
-            const generateCompanyPestelData = (companyName, industry) => {
-                const pestelFactors = {
+            const generateCompanyPestelData = (companyName, industry, size, primaryMarket) => {
+                let baseFactors = {
                     political: [
-                        { name: 'Government regulations in ' + industry, gravity: 4, urgency: 3, tendency: 3, description: '' },
-                        { name: 'Political stability in key markets', gravity: 3, urgency: 2, tendency: 4, description: '' },
+                        { name: 'General Election Cycle Impact', gravity: 3, urgency: 3, tendency: 4, description: 'Potential policy shifts post-election affecting business operations.' },
+                        { name: 'International Trade Agreements', gravity: 4, urgency: 2, tendency: 3, description: 'Changes in trade tariffs or agreements impacting export/import.' },
                     ],
                     economic: [
-                        { name: 'Economic growth in target markets', gravity: 4, urgency: 4, tendency: 3, description: '' },
-                        { name: 'Interest rate fluctuations', gravity: 3, urgency: 3, tendency: 4, description: '' },
+                        { name: 'Inflation Rate Trends', gravity: 4, urgency: 4, tendency: 4, description: 'Rising inflation affecting operational costs and consumer spending.' },
+                        { name: 'Currency Exchange Rate Stability', gravity: 3, urgency: 3, tendency: 3, description: 'Fluctuations in currency value impacting international business.' },
                     ],
                     social: [
-                        { name: 'Changing consumer preferences', gravity: 4, urgency: 4, tendency: 4, description: '' },
-                        { name: 'Demographic shifts', gravity: 3, urgency: 2, tendency: 4, description: '' },
+                        { name: 'Evolving Consumer Ethics & Values', gravity: 4, urgency: 4, tendency: 5, description: 'Shift towards sustainability and ethical sourcing influencing demand.' },
+                        { name: 'Workforce Skill Gaps', gravity: 3, urgency: 4, tendency: 3, description: 'Difficulty in finding talent with specialized skills.' },
                     ],
                     technological: [
-                        { name: 'AI and automation adoption', gravity: 5, urgency: 5, tendency: 5, description: '' },
-                        { name: 'Cybersecurity threats', gravity: 4, urgency: 5, tendency: 4, description: '' },
+                        { name: 'Advancements in AI/ML', gravity: 5, urgency: 5, tendency: 5, description: 'Rapid AI development creating opportunities and disruption.' },
+                        { name: '5G Network Rollout', gravity: 4, urgency: 3, tendency: 4, description: 'Enhanced connectivity enabling new services and operational efficiencies.' },
                     ],
                     environmental: [
-                        { name: 'Climate change regulations', gravity: 4, urgency: 4, tendency: 5, description: '' },
-                        { name: 'Sustainability requirements', gravity: 4, urgency: 3, tendency: 4, description: '' },
+                        { name: 'Increased Focus on Carbon Footprint Reduction', gravity: 4, urgency: 4, tendency: 5, description: 'Regulatory and consumer pressure to reduce emissions.' },
+                        { name: 'Water Scarcity in Key Regions', gravity: 3, urgency: 2, tendency: 3, description: 'Potential impact on supply chains and operational sustainability.' },
                     ],
                     legal: [
-                        { name: 'Data protection laws (GDPR, CCPA)', gravity: 5, urgency: 5, tendency: 4, description: '' },
-                        { name: 'Industry-specific regulations', gravity: 4, urgency: 4, tendency: 3, description: '' },
+                        { name: 'New Data Privacy Regulations', gravity: 5, urgency: 5, tendency: 4, description: 'Compliance requirements for handling customer data (e.g., GDPR-like laws).' },
+                        { name: 'Intellectual Property Law Changes', gravity: 3, urgency: 3, tendency: 2, description: 'Updates to patent or copyright laws affecting innovation protection.' },
                     ]
                 };
+
+                // Industry-specific adjustments
+                if (industry.toLowerCase().includes('technology')) {
+                    baseFactors.technological.push({ name: 'Semiconductor Supply Chain Issues', gravity: 4, urgency: 5, tendency: 3, description: 'Global chip shortages affecting hardware production.' });
+                    baseFactors.legal.push({ name: 'Anti-trust Scrutiny on Tech Giants', gravity: 3, urgency: 2, tendency: 4, description: 'Increased regulatory oversight for large technology companies.' });
+                } else if (industry.toLowerCase().includes('healthcare')) {
+                    baseFactors.political.push({ name: 'Government Healthcare Funding Policies', gravity: 5, urgency: 5, tendency: 4, description: 'Changes in public health spending and reimbursement rates.' });
+                    baseFactors.social.push({ name: 'Aging Population and Chronic Diseases', gravity: 4, urgency: 4, tendency: 5, description: 'Increased demand for healthcare services due to demographic shifts.' });
+                    baseFactors.technological.push({ name: 'Telemedicine Adoption', gravity: 4, urgency: 4, tendency: 5, description: 'Growth of remote patient care and digital health platforms.' });
+                } else if (industry.toLowerCase().includes('finance')) {
+                    baseFactors.economic.push({ name: 'Central Bank Digital Currency (CBDC) Developments', gravity: 3, urgency: 2, tendency: 4, description: 'Potential impact of government-backed digital currencies.' });
+                    baseFactors.technological.push({ name: 'Rise of Decentralized Finance (DeFi)', gravity: 4, urgency: 3, tendency: 4, description: 'Emerging blockchain-based financial services challenging traditional models.' });
+                }
+
+                // Size-specific adjustments
+                if (size === 'startup') {
+                    baseFactors.economic.push({ name: 'Access to Venture Capital / Seed Funding', gravity: 5, urgency: 5, tendency: 3, description: 'Availability of early-stage investment critical for growth.' });
+                    baseFactors.social.push({ name: 'Building Brand Awareness in a Crowded Market', gravity: 4, urgency: 4, tendency: 4, description: 'Challenges in gaining visibility against established players.' });
+                } else if (size === 'large' || size === 'enterprise') {
+                    baseFactors.political.push({ name: 'Navigating Complex International Regulatory Landscapes', gravity: 4, urgency: 3, tendency: 3, description: 'Compliance with diverse regulations in multiple markets.' });
+                    baseFactors.legal.push({ name: 'Complex Labor Laws in Multinational Operations', gravity: 3, urgency: 3, tendency: 2, description: 'Managing employment regulations across different countries.' });
+                }
+
+                // Market-specific adjustments
+                if (primaryMarket === 'australia') {
+                    baseFactors.political.push({ name: 'Australian Carbon Emission Targets', gravity: 4, urgency: 4, tendency: 4, description: 'National policies on climate change impacting businesses.' });
+                    baseFactors.economic.push({ name: 'Reliance on Commodity Prices (Australia)', gravity: 3, urgency: 2, tendency: 3, description: 'Impact of global commodity markets on the Australian economy.'});
+                } else if (primaryMarket === 'united-states') {
+                    baseFactors.political.push({ name: 'US Partisan Politics and Policy Gridlock', gravity: 3, urgency: 3, tendency: 4, description: 'Political polarization affecting legislative stability.' });
+                    baseFactors.economic.push({ name: 'Federal Reserve Monetary Policy (USA)', gravity: 5, urgency: 4, tendency: 4, description: 'Impact of interest rate changes and quantitative easing/tightening.'});
+                } else if (primaryMarket === 'global') {
+                     baseFactors.political.push({ name: 'Geopolitical Tensions and Conflicts', gravity: 5, urgency: 5, tendency: 4, description: 'Global instability impacting supply chains and market access.' });
+                }
+
 
                 return {
                     political: { factors: pestelFactors.political, isCollapsed: false },
@@ -496,28 +584,40 @@
                 };
             };
 
-            const generateCompetitors = (companyName) => {
-                // This would involve a real web search in a production environment
+            const generateCompetitors = (companyName = '', industry = '') => {
                 const lowerCaseCompany = companyName.toLowerCase();
+                const lowerCaseIndustry = industry.toLowerCase();
+                let sampleCompetitors = [];
+
                 if (lowerCaseCompany.includes("apple")) {
-                    return ["Samsung Electronics", "Google (Pixel)", "Huawei", "Xiaomi", "Microsoft (Surface)", "HP", "Dell", "Lenovo", "Sony", "LG", "OnePlus", "Asus", "Acer", "Razer", "HTC", "Motorola", "Nokia", "BlackBerry", "Fujitsu", "Panasonic"];
+                    sampleCompetitors = ["Samsung Mobile", "Google Pixel Phones", "Huawei Devices", "Xiaomi Tech", "Oppo Gadgets", "Vivo Electronics", "OnePlus Innovations", "Sony Mobile", "LG Electronics (Mobile Div.)", "HMD Global (Nokia Phones)", "Asus Computers", "Microsoft Surface"];
                 } else if (lowerCaseCompany.includes("microsoft")) {
-                    return ["Google", "Amazon (AWS)", "Apple", "Salesforce", "Oracle", "IBM", "SAP", "Adobe", "Workday", "ServiceNow", "VMware", "Red Hat", "Cisco", "Dell Technologies", "HP Inc.", "Lenovo", "Samsung", "Sony", "Nintendo", "Activision Blizzard"];
+                    sampleCompetitors = ["Google Cloud", "Amazon Web Services", "Apple Software", "Salesforce CRM", "Oracle Systems", "IBM Enterprise", "SAP Solutions", "Adobe Creative Cloud", "VMware Virtualization", "Red Hat Linux", "Cisco Networking", "Sony Gaming"];
+                } else if (lowerCaseIndustry.includes("technology") || lowerCaseIndustry.includes("software")) {
+                    sampleCompetitors = ["Innovatech Solutions", "Digital Future Inc.", "Cyber Systems Ltd.", "Quantum Leap AI", "NextGen Software Co.", "AlphaBeta Tech", "Synergy Softworks", "DataDrive Corp.", "CloudPioneers", "TechCore Dynamics", "LogicStream", "FutureProof Systems"];
+                } else if (lowerCaseIndustry.includes("healthcare")) {
+                    sampleCompetitors = ["MediCare Plus", "HealthPro Services", "WellLife Clinics", "BioGenesis Corp.", "PharmaSolutions Ltd.", "CareFirst Group", "Vitalis Health", "GenHeal Bio", "MedTech Innovators", "Elixir Pharma", "PrimeCare Network", "Wellness Partners"];
+                } else if (lowerCaseIndustry.includes("finance")) {
+                    sampleCompetitors = ["FinSecure Bank", "CapitalTrust Investments", "MoneyFlow Services", "Global Ledger Inc.", "WealthBuilders Co.", "CreditWise Union", "DigitalPay Solutions", "SecureFund Lenders", "Fintech Innovations Ltd.", "AssetPrime Managers", "EquityLink Capital", "PrimeMortgage Corp"];
+                } else if (lowerCaseIndustry.includes("retail")) {
+                     sampleCompetitors = ["ShopSmart Inc.", "Everyday Goods Co.", "RetailNext Group", "Urban Outfitters", "GlobalMart", "FashionForward Ltd.", "HomeEssentials Store", "The Gadget Hub", "QuickBuy Online", "ValueChoice Retail", "StyleSphere", "MarketFresh Foods"];
                 }
-                return [
-                    "Competitor A Corp.", "Competitor B Ltd.", "Competitor C Inc.", "Competitor D Group",
-                    "Competitor E Solutions", "Competitor F Innovations", "Competitor G Global",
-                    "Competitor H Systems", "Competitor I Enterprises", "Competitor J Holdings",
-                    "Competitor K Dynamics", "Competitor L Industries", "Competitor M Ventures",
-                    "Competitor N Tech", "Competitor O Services", "Competitor P Corp.",
-                    "Competitor Q Ltd.", "Competitor R Inc.", "Competitor S Group", "Competitor T Solutions"
-                ];
+                else { // Generic fallback
+                    sampleCompetitors = [
+                        "Global Corp Inc.", "Synergy Solutions Ltd.", "Apex Innovations Co.", "Dynamic Enterprises", "Pioneer Group",
+                        "United Services", "Keystone Industries", "Starlight Ventures", "Momentum Corp.", "Quantum Systems",
+                        "Vertex Group", "Orion Ltd.", "NovaTech", "Zenith Corp", "BlueSky Innovations"
+                    ];
+                }
+                // Ensure list is around 10-15
+                return sampleCompetitors.slice(0, Math.floor(Math.random() * 6) + 10); // 10 to 15
             };
 
-            const generatePortersForces = (industry, primaryMarket) => {
+            const generatePortersForces = (industry = '', primaryMarket = '') => {
                 const lowerCaseIndustry = industry.toLowerCase();
                 const lowerCaseMarket = primaryMarket.toLowerCase();
-                let forces = {
+                
+                let baseDescriptions = {
                     threatOfNewEntrants: 'Moderate - Capital requirements can be high, but digital disruption lowers barriers.',
                     bargainingPowerOfBuyers: 'High - Buyers have many choices and access to information.',
                     bargainingPowerOfSuppliers: 'Moderate - Depends on uniqueness of components/services.',
@@ -527,42 +627,50 @@
                 };
 
                 if (lowerCaseIndustry.includes("healthcare")) {
-                    forces.threatOfNewEntrants = 'Low - High regulatory hurdles, capital intensity, and specialized knowledge required.';
-                    forces.bargainingPowerOfBuyers = 'Moderate - Patients often rely on insurance/providers, but consumer choice is growing.';
-                    forces.bargainingPowerOfSuppliers = 'High - Specialized medical equipment and pharmaceutical suppliers have strong power.';
-                    forces.threatOfSubstituteProductsOrServices = 'Low to Moderate - Alternatives exist (e.g., preventative care vs. treatment), but direct substitutes for critical care are limited.';
-                    forces.rivalryAmongExistingCompetitors = 'Moderate to High - Competition among hospitals, clinics, and pharma companies, but often localized or specialized.';
-                    forces.relativePowerOfNewComplementors = 'Moderate - Telemedicine platforms, health tech apps, and diagnostic tools enhance services.';
+                    baseDescriptions.threatOfNewEntrants = 'Low - High regulatory hurdles, capital intensity, and specialized knowledge required.';
+                    baseDescriptions.bargainingPowerOfBuyers = 'Moderate - Patients often rely on insurance/providers, but consumer choice is growing.';
+                    baseDescriptions.bargainingPowerOfSuppliers = 'High - Specialized medical equipment and pharmaceutical suppliers have strong power.';
+                    baseDescriptions.threatOfSubstituteProductsOrServices = 'Low to Moderate - Alternatives exist (e.g., preventative care vs. treatment), but direct substitutes for critical care are limited.';
+                    baseDescriptions.rivalryAmongExistingCompetitors = 'Moderate to High - Competition among hospitals, clinics, and pharma companies, but often localized or specialized.';
+                    baseDescriptions.relativePowerOfNewComplementors = 'Moderate - Telemedicine platforms, health tech apps, and diagnostic tools enhance services.';
                 } else if (lowerCaseIndustry.includes("finance")) {
-                    forces.threatOfNewEntrants = 'Moderate to High - Fintech startups are lowering barriers, but regulatory burden remains high for traditional banking.';
-                    forces.bargainingPowerOfBuyers = 'High - Customers can easily switch banks/financial providers due to low switching costs and digital options.';
-                    forces.bargainingPowerOfSuppliers = 'Moderate - Technology providers, data services, and interbank networks hold some power.';
-                    forces.threatOfSubstituteProductsOrServices = 'High - Cryptocurrencies, peer-to-peer lending, and alternative investment platforms pose significant threats.';
-                    forces.rivalryAmongExistingCompetitors = 'Very High - Intense competition among banks, investment firms, and fintechs, often leading to aggressive marketing and product innovation.';
-                    forces.relativePowerOfNewComplementors = 'High - Payment gateways, financial planning software, and data analytics tools are crucial for modern financial services.';
+                    baseDescriptions.threatOfNewEntrants = 'Moderate to High - Fintech startups are lowering barriers, but regulatory burden remains high for traditional banking.';
+                    baseDescriptions.bargainingPowerOfBuyers = 'High - Customers can easily switch banks/financial providers due to low switching costs and digital options.';
+                    baseDescriptions.bargainingPowerOfSuppliers = 'Moderate - Technology providers, data services, and interbank networks hold some power.';
+                    baseDescriptions.threatOfSubstituteProductsOrServices = 'High - Cryptocurrencies, peer-to-peer lending, and alternative investment platforms pose significant threats.';
+                    baseDescriptions.rivalryAmongExistingCompetitors = 'Very High - Intense competition among banks, investment firms, and fintechs, often leading to aggressive marketing and product innovation.';
+                    baseDescriptions.relativePowerOfNewComplementors = 'High - Payment gateways, financial planning software, and data analytics tools are crucial for modern financial services.';
                 } else if (lowerCaseIndustry.includes("retail")) {
-                    forces.threatOfNewEntrants = 'High - Low barriers to entry for online retail, but physical retail requires significant capital.';
-                    forces.bargainingPowerOfBuyers = 'Very High - Consumers have vast choices, price transparency, and low switching costs.';
-                    forces.bargainingPowerOfSuppliers = 'Moderate - Large retailers have significant power, but unique brands can command higher prices.';
-                    forces.threatOfSubstituteProductsOrServices = 'High - E-commerce, direct-to-consumer brands, and sharing economy models are strong substitutes.';
-                    forces.rivalryAmongExistingCompetitors = 'Very High - Intense price competition, constant innovation in customer experience, and rapid trend changes.';
-                    forces.relativePowerOfNewComplementors = 'High - Payment solutions, logistics providers, and marketing platforms are essential for retail success.';
+                    baseDescriptions.threatOfNewEntrants = 'High - Low barriers to entry for online retail, but physical retail requires significant capital.';
+                    baseDescriptions.bargainingPowerOfBuyers = 'Very High - Consumers have vast choices, price transparency, and low switching costs.';
+                    baseDescriptions.bargainingPowerOfSuppliers = 'Moderate - Large retailers have significant power, but unique brands can command higher prices.';
+                    baseDescriptions.threatOfSubstituteProductsOrServices = 'High - E-commerce, direct-to-consumer brands, and sharing economy models are strong substitutes.';
+                    baseDescriptions.rivalryAmongExistingCompetitors = 'Very High - Intense price competition, constant innovation in customer experience, and rapid trend changes.';
+                    baseDescriptions.relativePowerOfNewComplementors = 'High - Payment solutions, logistics providers, and marketing platforms are essential for retail success.';
                 }
 
-                // Adjust based on primary market if specific data is available
                 if (lowerCaseMarket.includes("australia")) {
                     if (lowerCaseIndustry.includes("finance")) {
-                        forces.threatOfNewEntrants += ' (Australia: Strong regulatory oversight, but fintech growth is notable).';
-                        forces.rivalryAmongExistingCompetitors += ' (Australia: Dominated by major banks, but increasing competition from smaller players).';
+                        baseDescriptions.threatOfNewEntrants += ' (Australia: Strong regulatory oversight, but fintech growth is notable).';
+                        baseDescriptions.rivalryAmongExistingCompetitors += ' (Australia: Dominated by major banks, but increasing competition from smaller players).';
                     }
                 } else if (lowerCaseMarket.includes("united-states")) {
                     if (lowerCaseIndustry.includes("technology")) {
-                        forces.threatOfNewEntrants += ' (USA: High innovation, but strong incumbents).';
-                        forces.rivalryAmongExistingCompetitors += ' (USA: Global tech giants lead to fierce competition).';
+                        baseDescriptions.threatOfNewEntrants += ' (USA: High innovation, but strong incumbents).';
+                        baseDescriptions.rivalryAmongExistingCompetitors += ' (USA: Global tech giants lead to fierce competition).';
                     }
                 }
-
-                return forces;
+                
+                const structuredForces = {};
+                for (const forceKey in baseDescriptions) {
+                    structuredForces[forceKey] = {
+                        description: baseDescriptions[forceKey],
+                        gravity: 3, // Default G.U.T.
+                        urgency: 3,
+                        tendency: 3
+                    };
+                }
+                return structuredForces;
             };
 
             const calculateGUTScore = (factor) => {
@@ -758,177 +866,350 @@
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Company Name * <span className="text-red-500">Required</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={companyData.name}
-                                        onChange={(e) => handleCompanyNameChange(e.target.value)}
-                                        onFocus={() => {
-                                            if (companyData.name.length > 0) {
-                                                const filtered = companySuggestions.filter(company =>
-                                                    company.toLowerCase().includes(companyData.name.toLowerCase())
-                                                );
-                                                setFilteredCompanySuggestions(filtered);
-                                                setShowCompanySuggestions(filtered.length > 0);
-                                            }
-                                        }}
-                                        className="input-field"
-                                        placeholder="Enter company name..."
-                                        required
-                                    />
-                                    {showCompanySuggestions && filteredCompanySuggestions.length > 0 && (
-                                        <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                            {filteredCompanySuggestions.slice(0, 8).map((suggestion, index) => (
-                                                <div
-                                                    key={index}
-                                                    onClick={() => selectCompanySuggestion(suggestion)}
-                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                                                >
-                                                    <div className="font-medium text-gray-800">{suggestion}</div>
+                                    {isCompanyNameEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                value={companyData.name}
+                                                onChange={(e) => handleCompanyNameChange(e.target.value)}
+                                                onFocus={() => {
+                                                    if (companyData.name.length > 0) {
+                                                        const filtered = companySuggestions.filter(company =>
+                                                            company.toLowerCase().includes(companyData.name.toLowerCase())
+                                                        );
+                                                        setFilteredCompanySuggestions(filtered);
+                                                        setShowCompanySuggestions(filtered.length > 0);
+                                                    }
+                                                }}
+                                                className="input-field flex-1"
+                                                placeholder="Enter company name..."
+                                                required
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsCompanyNameEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                            {showCompanySuggestions && filteredCompanySuggestions.length > 0 && (
+                                                <div className="absolute top-full left-0 z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                                    {filteredCompanySuggestions.slice(0, 8).map((suggestion, index) => (
+                                                        <div
+                                                            key={index}
+                                                            onClick={() => selectCompanySuggestion(suggestion)}
+                                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                                        >
+                                                            <div className="font-medium text-gray-800">{suggestion}</div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.name || <span className="text-gray-400">Enter company name...</span>}
+                                            </span>
+                                            <button onClick={() => setIsCompanyNameEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Founded Year</label>
-                                    <input
-                                        type="number"
-                                        value={companyData.foundedYear}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, foundedYear: e.target.value }))}
-                                        className="input-field"
-                                        placeholder="e.g., 2010"
-                                        min="1800"
-                                        max={new Date().getFullYear()}
-                                    />
+                                    {isFoundedYearEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="number"
+                                                value={companyData.foundedYear}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, foundedYear: e.target.value }))}
+                                                className="input-field flex-1"
+                                                placeholder="e.g., 2010"
+                                                min="1800"
+                                                max={new Date().getFullYear()}
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsFoundedYearEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.foundedYear || <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsFoundedYearEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
-                                <div ref={industryRef}>
+                                <div ref={industryRef} className="relative">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Industry *</label>
-                                    <input
-                                        type="text"
-                                        value={companyData.industry}
-                                        onChange={(e) => handleIndustryChange(e.target.value)}
-                                        onFocus={() => {
-                                            if (companyData.industry.length > 0) {
-                                                const filtered = industrySuggestions.filter(industry =>
-                                                    industry.toLowerCase().includes(companyData.industry.toLowerCase())
-                                                );
-                                                setFilteredIndustrySuggestions(filtered);
-                                                setShowIndustrySuggestions(filtered.length > 0);
-                                            }
-                                        }}
-                                        className="input-field"
-                                        placeholder="Enter industry..."
-                                        required
-                                    />
-                                    {showIndustrySuggestions && filteredIndustrySuggestions.length > 0 && (
-                                        <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                            {filteredIndustrySuggestions.slice(0, 8).map((suggestion, index) => (
-                                                <div
-                                                    key={index}
-                                                    onClick={() => selectIndustrySuggestion(suggestion)}
-                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                                                >
-                                                    <div className="font-medium text-gray-800">{suggestion}</div>
+                                    {isIndustryEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                value={companyData.industry}
+                                                onChange={(e) => handleIndustryChange(e.target.value)}
+                                                onFocus={() => {
+                                                    if (companyData.industry && companyData.industry.length > 0) {
+                                                        const filtered = industrySuggestions.filter(industry =>
+                                                            industry.toLowerCase().includes(companyData.industry.toLowerCase())
+                                                        );
+                                                        setFilteredIndustrySuggestions(filtered);
+                                                        setShowIndustrySuggestions(filtered.length > 0);
+                                                    } else {
+                                                       setShowIndustrySuggestions(true); // Show all if input is empty
+                                                       setFilteredIndustrySuggestions(industrySuggestions);
+                                                    }
+                                                }}
+                                                className="input-field flex-1"
+                                                placeholder="Enter industry..."
+                                                required
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsIndustryEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                            {showIndustrySuggestions && filteredIndustrySuggestions.length > 0 && (
+                                                <div className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                                    {filteredIndustrySuggestions.slice(0, 8).map((suggestion, index) => (
+                                                        <div
+                                                            key={index}
+                                                            onClick={() => selectIndustrySuggestion(suggestion)}
+                                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                                        >
+                                                            <div className="font-medium text-gray-800">{suggestion}</div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.industry || <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsIndustryEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Primary Market *</label>
-                                    <select
-                                        value={companyData.primaryMarket}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, primaryMarket: e.target.value }))}
-                                        className="input-field"
-                                        required
-                                    >
-                                        <option value="">Select Primary Market</option>
-                                        <option value="australia">Australia</option>
-                                        <option value="united-states">United States</option>
-                                        <option value="global">Global</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                    {isPrimaryMarketEditing ? (
+                                        <div className="flex items-center">
+                                            <select
+                                                value={companyData.primaryMarket}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, primaryMarket: e.target.value }))}
+                                                className="input-field flex-1"
+                                                required
+                                                autoFocus
+                                            >
+                                                <option value="">Select Primary Market</option>
+                                                <option value="australia">Australia</option>
+                                                <option value="united-states">United States</option>
+                                                <option value="global">Global</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                            <button onClick={() => setIsPrimaryMarketEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.primaryMarket ? companyData.primaryMarket.charAt(0).toUpperCase() + companyData.primaryMarket.slice(1).replace("-", " ") : <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsPrimaryMarketEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Business Model *</label>
-                                    <select
-                                        value={companyData.businessModel}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, businessModel: e.target.value }))}
-                                        className="input-field"
-                                        required
-                                    >
-                                        <option value="">Select Business Model</option>
-                                        <option value="b2b">B2B (Business to Business)</option>
-                                        <option value="b2c">B2C (Business to Consumer)</option>
-                                        <option value="saas">SaaS (Software as a Service)</option>
-                                        <option value="e-commerce">E-commerce</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                    {isBusinessModelEditing ? (
+                                        <div className="flex items-center">
+                                            <select
+                                                value={companyData.businessModel}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, businessModel: e.target.value }))}
+                                                className="input-field flex-1"
+                                                required
+                                                autoFocus
+                                            >
+                                                <option value="">Select Business Model</option>
+                                                <option value="b2b">B2B (Business to Business)</option>
+                                                <option value="b2c">B2C (Business to Consumer)</option>
+                                                <option value="saas">SaaS (Software as a Service)</option>
+                                                <option value="e-commerce">E-commerce</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                            <button onClick={() => setIsBusinessModelEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.businessModel ? {b2b: 'B2B', b2c: 'B2C', saas: 'SaaS', 'e-commerce': 'E-commerce', other: 'Other'}[companyData.businessModel] || companyData.businessModel : <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsBusinessModelEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Company Size</label>
-                                    <select
-                                        value={companyData.size}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, size: e.target.value }))}
-                                        className="input-field"
-                                    >
-                                        <option value="">Select Size</option>
-                                        <option value="startup">Startup (1-10 employees)</option>
-                                        <option value="small">Small (11-50 employees)</option>
-                                        <option value="medium">Medium (51-200 employees)</option>
-                                        <option value="large">Large (201-1000 employees)</option>
-                                        <option value="enterprise">Enterprise (1000+ employees)</option>
-                                    </select>
+                                    {isSizeEditing ? (
+                                        <div className="flex items-center">
+                                            <select
+                                                value={companyData.size}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, size: e.target.value }))}
+                                                className="input-field flex-1"
+                                                autoFocus
+                                            >
+                                                <option value="">Select Size</option>
+                                                <option value="startup">Startup (1-10 employees)</option>
+                                                <option value="small">Small (11-50 employees)</option>
+                                                <option value="medium">Medium (51-200 employees)</option>
+                                                <option value="large">Large (201-1000 employees)</option>
+                                                <option value="enterprise">Enterprise (1000+ employees)</option>
+                                            </select>
+                                            <button onClick={() => setIsSizeEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.size ? {startup: 'Startup (1-10)', small: 'Small (11-50)', medium: 'Medium (51-200)', large: 'Large (201-1000)', enterprise: 'Enterprise (1000+)'}[companyData.size] || companyData.size : <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsSizeEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Annual Revenue</label>
-                                    <input
-                                        type="text"
-                                        value={companyData.revenue}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, revenue: e.target.value }))}
-                                        className="input-field"
-                                        placeholder="e.g., \$10M, \$100M, \$1B"
-                                    />
+                                    {isRevenueEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                value={companyData.revenue}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, revenue: e.target.value }))}
+                                                className="input-field flex-1"
+                                                placeholder="e.g., \$10M, \$100M, \$1B"
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsRevenueEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.revenue || <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsRevenueEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Headquarters</label>
-                                    <input
-                                        type="text"
-                                        value={companyData.headquarters}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, headquarters: e.target.value }))}
-                                        className="input-field"
-                                        placeholder="City, Country"
-                                    />
+                                    {isHeadquartersEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                value={companyData.headquarters}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, headquarters: e.target.value }))}
+                                                className="input-field flex-1"
+                                                placeholder="City, Country"
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsHeadquartersEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.headquarters || <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsHeadquartersEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                                    <input
-                                        type="url"
-                                        value={companyData.website}
-                                        onChange={(e) => setCompanyData(prev => ({ ...prev, website: e.target.value }))}
-                                        className="input-field"
-                                        placeholder="https://www.company.com"
-                                    />
+                                    {isWebsiteEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="url"
+                                                value={companyData.website}
+                                                onChange={(e) => setCompanyData(prev => ({ ...prev, website: e.target.value }))}
+                                                className="input-field flex-1"
+                                                placeholder="https://www.company.com"
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setIsWebsiteEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                <i className="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <span className="input-field flex-1 min-h-[40px] flex items-center">
+                                                {companyData.website || <span className="text-gray-400">N/A</span>}
+                                            </span>
+                                            <button onClick={() => setIsWebsiteEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="mt-6">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Company Description</label>
-                                <textarea
-                                    value={companyData.description}
-                                    onChange={(e) => setCompanyData(prev => ({ ...prev, description: e.target.value }))}
-                                    className="input-field"
-                                    rows="4"
-                                    placeholder="Brief description of your company's business model, main activities, and market position..."
-                                />
+                                {isDescriptionEditing ? (
+                                    <div className="flex items-start"> {/* items-start for textarea alignment */}
+                                        <textarea
+                                            value={companyData.description}
+                                            onChange={(e) => setCompanyData(prev => ({ ...prev, description: e.target.value }))}
+                                            className="input-field flex-1"
+                                            rows="4"
+                                            placeholder="Brief description of your company's business model, main activities, and market position..."
+                                            autoFocus
+                                        />
+                                        <button onClick={() => setIsDescriptionEditing(false)} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                            <i className="fas fa-check"></i>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-start">
+                                        <span className="input-field flex-1 min-h-[88px] flex items-center whitespace-pre-wrap"> {/* Adjusted min-h and whitespace */}
+                                            {companyData.description || <span className="text-gray-400">Not set</span>}
+                                        </span>
+                                        <button onClick={() => setIsDescriptionEditing(true)} className="ml-2 p-2 text-blue-600 hover:text-blue-800">
+                                            <i className="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1056,9 +1337,82 @@
                 const currentPestelData = selectedPestelScope === 'company' ? companyPestelData : productPestels[selectedPestelScope];
                 const isProductSpecificView = selectedPestelScope !== 'company';
 
+            const toggleFactorFieldEdit = (factorKey, field) => {
+                setFactorFieldEditStates(prev => ({
+                    ...prev,
+                    [`${factorKey}-${field}`]: !prev[`${factorKey}-${field}`]
+                }));
+            };
+
+            const isFactorFieldEditing = (factorKey, field) => {
+                return !!factorFieldEditStates[`${factorKey}-${field}`];
+            };
+
+            const isPortersDescriptionEditing = (scope, forceKey) => {
+                return !!portersDescriptionEditStates[`${scope}-${forceKey}`];
+            };
+
+            const togglePortersDescriptionEdit = (scope, forceKey) => {
+                setPortersDescriptionEditStates(prev => ({
+                    ...prev,
+                    [`${scope}-${forceKey}`]: !prev[`${scope}-${forceKey}`]
+                }));
+            };
+
+            const generateSampleClientPersonas = (count = 3, companyIndustry = "General", productName = null) => {
+                const samplePersonas = [];
+                const occupations = ["Marketing Manager", "Software Engineer", "Small Business Owner", "Teacher", "Doctor", "Student", "Artist", "Project Manager"];
+                const personaNames = ["Alex", "Jamie", "Chris", "Pat", "Sam", "Taylor", "Jordan", "Morgan"];
+                const adjectives = ["Driven", "Tech-Savvy", "Busy", "Creative", "Pragmatic", "Budget-Conscious", "Organized", "Detail-Oriented"];
+
+                for (let i = 0; i < count; i++) {
+                    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+                    const name = personaNames[Math.floor(Math.random() * personaNames.length)];
+                    const occupation = occupations[Math.floor(Math.random() * occupations.length)];
+                    const age = Math.floor(Math.random() * 40) + 22; // Age between 22 and 62
+
+                    let goals = [
+                        `Achieve ${Math.random() > 0.5 ? 'better work-life balance' : 'career growth'}`,
+                        `Find ${Math.random() > 0.5 ? 'user-friendly tools' : 'cost-effective solutions'}`,
+                        `Improve ${Math.random() > 0.5 ? 'productivity' : 'collaboration with team'}`
+                    ];
+                    let frustrations = [
+                        `Dealing with ${Math.random() > 0.5 ? 'complex software' : 'poor customer service'}`,
+                        `Wasting time on ${Math.random() > 0.5 ? 'manual tasks' : 'inefficient processes'}`,
+                        `${Math.random() > 0.5 ? 'High learning curve' : 'Lack of integration'} for new tools`
+                    ];
+
+                    if (companyIndustry.toLowerCase().includes("healthcare")) {
+                        goals.push("Access reliable patient information quickly");
+                        frustrations.push("Navigating complex medical billing");
+                    } else if (companyIndustry.toLowerCase().includes("technology")) {
+                        goals.push("Stay updated with the latest tech trends");
+                        frustrations.push("Data security concerns");
+                    }
+                     if (productName) {
+                        goals.push(`Find a solution specifically for ${productName}`);
+                    }
+
+
+                    samplePersonas.push({
+                        id: `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: `${adj} ${name}`,
+                        age: age,
+                        occupation: occupation,
+                        bio: `A ${adj.toLowerCase()} ${occupation.toLowerCase()} aged ${age}, looking for ways to streamline their work and achieve key objectives in the ${companyIndustry} sector. ${productName ? `Specifically interested in solutions related to ${productName}.` : ''}`,
+                        goals: goals,
+                        frustrations: frustrations,
+                        gravity: Math.floor(Math.random() * 3) + 3, // 3-5
+                        urgency: Math.floor(Math.random() * 3) + 3, // 3-5
+                        tendency: Math.floor(Math.random() * 3) + 3, // 3-5
+                    });
+                }
+                return samplePersonas;
+            }
+
                 const renderPestelFactors = (pestelData, isProductSpecific = false, productName = '') => {
                     return Object.entries(pestelData).map(([category, data]) => (
-                        <div key={category} className="mb-6 border border-gray-200 rounded-lg">
+                    <div key={`${productName || 'company'}-${category}`} className="mb-6 border border-gray-200 rounded-lg">
                             <div
                                 className="collapsible-header"
                                 onClick={() => toggleCategoryCollapse(category, isProductSpecific, productName)}
@@ -1083,120 +1437,114 @@
                                         </button>
                                     </div>
 
-                                    <div className="space-y-3">
+                                <div className="space-y-4">
                                         {data.factors.map((factor, index) => {
                                             const gutScore = calculateGUTScore(factor);
-                                            const isEditing = editingFactor === `${productName || 'company'}-${category}-${index}`;
+                                        const factorKey = `${productName || 'company'}-${category}-${index}`;
+                                        const isNameEditing = isFactorFieldEditing(factorKey, 'name');
+                                        const isDescriptionEditing = isFactorFieldEditing(factorKey, 'description');
 
                                             return (
-                                                <div key={index} className="border border-gray-200 rounded p-3">
-                                                    {isEditing ? (
-                                                        <div className="space-y-3">
+                                            <div key={factorKey} className="border border-gray-200 rounded p-4 space-y-3 bg-white shadow-sm">
+                                                {/* Factor Name */}
+                                                <div className="flex justify-between items-center">
+                                                    {isNameEditing ? (
+                                                        <div className="flex-grow flex items-center">
                                                             <input
                                                                 type="text"
                                                                 value={factor.name}
                                                                 onChange={(e) => updateFactor(category, index, { ...factor, name: e.target.value }, isProductSpecific, productName)}
-                                                                className="input-field"
+                                                                className="input-field text-sm flex-grow"
                                                                 placeholder="Factor name..."
+                                                                autoFocus
                                                             />
+                                                            <button onClick={() => toggleFactorFieldEdit(factorKey, 'name')} className="ml-2 p-2 text-green-600 hover:text-green-800">
+                                                                <i className="fas fa-check"></i>
+                                                            </button>
+                                                            </div>
+                                                    ) : (
+                                                        <div className="flex-grow flex items-center">
+                                                            <h6 className="font-medium text-gray-800 flex-grow cursor-pointer" onClick={() => toggleFactorFieldEdit(factorKey, 'name')}>{factor.name || "Unnamed Factor"}</h6>
+                                                            <button onClick={() => toggleFactorFieldEdit(factorKey, 'name')} className="ml-2 p-1 text-blue-500 hover:text-blue-700 text-xs">
+                                                                <i className="fas fa-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-2 ml-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${getGUTScoreColor(gutScore)}`}>
+                                                            G.U.T: {gutScore}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => removeFactor(category, index, isProductSpecific, productName)}
+                                                            className="text-red-500 hover:text-red-700 text-sm"
+                                                            title="Remove factor"
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Factor Description */}
+                                                <div>
+                                                    {isDescriptionEditing ? (
+                                                        <div className="flex items-start">
                                                             <textarea
                                                                 value={factor.description}
                                                                 onChange={(e) => updateFactor(category, index, { ...factor, description: e.target.value }, isProductSpecific, productName)}
-                                                                className="input-field"
-                                                                rows="2"
+                                                                className="input-field text-sm flex-grow"
+                                                                rows="3"
                                                                 placeholder="Detailed description..."
+                                                                autoFocus
                                                             ></textarea>
-
-                                                            <div className="grid grid-cols-3 gap-3">
-                                                                <div>
-                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Gravity (1-5)</label>
-                                                                    <select
-                                                                        value={factor.gravity}
-                                                                        onChange={(e) => updateFactor(category, index, { ...factor, gravity: parseInt(e.target.value) }, isProductSpecific, productName)}
-                                                                        className="input-field text-sm"
-                                                                    >
-                                                                        {[1, 2, 3, 4, 5].map(n => (
-                                                                            <option key={n} value={n}>{n}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Urgency (1-5)</label>
-                                                                    <select
-                                                                        value={factor.urgency}
-                                                                        onChange={(e) => updateFactor(category, index, { ...factor, urgency: parseInt(e.target.value) }, isProductSpecific, productName)}
-                                                                        className="input-field text-sm"
-                                                                    >
-                                                                        {[1, 2, 3, 4, 5].map(n => (
-                                                                            <option key={n} value={n}>{n}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-xs font-medium text-gray-600 mb-1">Tendency (1-5)</label>
-                                                                    <select
-                                                                        value={factor.tendency}
-                                                                        onChange={(e) => updateFactor(category, index, { ...factor, tendency: parseInt(e.target.value) }, isProductSpecific, productName)}
-                                                                        className="input-field text-sm"
-                                                                    >
-                                                                        {[1, 2, 3, 4, 5].map(n => (
-                                                                            <option key={n} value={n}>{n}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex gap-2 mt-3">
-                                                                <button
-                                                                    onClick={() => setEditingFactor(null)}
-                                                                    className="button-primary"
-                                                                >
-                                                                    Save
+                                                            <button onClick={() => toggleFactorFieldEdit(factorKey, 'description')} className="ml-2 p-2 text-green-600 hover:text-green-800 self-start">
+                                                                <i className="fas fa-check"></i>
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => setEditingFactor(null)}
-                                                                    className="button-secondary"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
                                                         </div>
                                                     ) : (
-                                                        <div>
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <h6 className="font-medium text-gray-800">{factor.name}</h6>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${getGUTScoreColor(gutScore)}`}>
-                                                                        G.U.T: {gutScore}
-                                                                    </span>
-                                                                    <button
-                                                                        onClick={() => setEditingFactor(`${productName || 'company'}-${category}-${index}`)}
-                                                                        className="text-blue-600 hover:text-blue-800 text-sm"
-                                                                    >
-                                                                        <i className="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => removeFactor(category, index, isProductSpecific, productName)}
-                                                                        className="text-red-600 hover:text-red-800 text-sm"
-                                                                    >
-                                                                        <i className="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div>
+                                                        <div className="flex items-start">
+                                                            <p className="text-sm text-gray-600 mb-0 flex-grow cursor-pointer whitespace-pre-wrap min-h-[20px]" onClick={() => toggleFactorFieldEdit(factorKey, 'description')}>
+                                                                {factor.description || <span className="text-gray-400">No description. Click to add.</span>}
+                                                            </p>
+                                                            <button onClick={() => toggleFactorFieldEdit(factorKey, 'description')} className="ml-2 p-1 text-blue-500 hover:text-blue-700 text-xs self-start">
+                                                                <i className="fas fa-edit"></i>
+                                                                </button>
                                                             </div>
-                                                            <p className="text-sm text-gray-600 mb-2">{factor.description}</p>
-                                                            <div className="grid grid-cols-3 gap-2 text-xs">
-                                                                <div className="bg-gray-50 p-2 rounded">
-                                                                    <div className="font-medium text-gray-600">G: {factor.gravity}</div>
-                                                                </div>
-                                                                <div className="bg-gray-50 p-2 rounded">
-                                                                    <div className="font-medium text-gray-600">U: {factor.urgency}</div>
-                                                                </div>
-                                                                <div className="bg-gray-50 p-2 rounded">
-                                                                    <div className="font-medium text-gray-600">T: {factor.tendency}</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
                                                     )}
+                                                </div>
+
+                                                {/* G.U.T. Scores - Always Selectable */}
+                                                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-gray-100">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Gravity (1-5)</label>
+                                                        <select
+                                                            value={factor.gravity}
+                                                            onChange={(e) => updateFactor(category, index, { ...factor, gravity: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                            className="input-field text-sm py-1"
+                                                        >
+                                                            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                        </select>
+                                                        </div>
+                                                        <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Urgency (1-5)</label>
+                                                        <select
+                                                            value={factor.urgency}
+                                                            onChange={(e) => updateFactor(category, index, { ...factor, urgency: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                            className="input-field text-sm py-1"
+                                                        >
+                                                            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                        </select>
+                                                        </div>
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Tendency (1-5)</label>
+                                                        <select
+                                                            value={factor.tendency}
+                                                            onChange={(e) => updateFactor(category, index, { ...factor, tendency: parseInt(e.target.value) }, isProductSpecific, productName)}
+                                                            className="input-field text-sm py-1"
+                                                        >
+                                                            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
                                                 </div>
                                             );
                                         })}
@@ -1221,13 +1569,33 @@
                                         id="pestel-scope-select"
                                         value={selectedPestelScope}
                                         onChange={(e) => setSelectedPestelScope(e.target.value)}
-                                        className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                        className="input-field text-sm"
                                     >
                                         <option value="company">Company PESTEL</option>
                                         {companyData.keyProducts.map((product, index) => (
                                             <option key={index} value={product}>{product} PESTEL</option>
                                         ))}
                                     </select>
+                                    <button
+                                        onClick={() => {
+                                            const newPestelData = generateCompanyPestelData(companyData.name, companyData.industry, companyData.size, companyData.primaryMarket);
+                                            setCompanyPestelData(newPestelData);
+                                            // Optionally, if the user is viewing the company PESTEL, make sure it's not collapsed
+                                            if (selectedPestelScope === 'company') {
+                                                const uncollapsedData = {};
+                                                for (const category in newPestelData) {
+                                                    uncollapsedData[category] = { ...newPestelData[category], isCollapsed: false };
+                                                }
+                                                setCompanyPestelData(uncollapsedData);
+                                            }
+                                            alert('Sample company-wide PESTEL factors generated. You can review and adapt them as needed.');
+                                        }}
+                                        className="button-secondary text-sm flex items-center gap-2"
+                                        title="Generates a new set of sample PESTEL factors for the entire company based on its current profile. This will overwrite existing company PESTEL data."
+                                    >
+                                        <i className="fas fa-wand-magic-sparkles"></i>
+                                        Suggest Company PESTEL Factors
+                                    </button>
                                 </div>
                             </div>
 
@@ -1305,104 +1673,293 @@
                         <div className="form-section">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Porter's Six Forces Analysis</h3>
                             <p className="text-gray-600 mb-6">
-                                Analyze the competitive intensity and attractiveness of your industry based on the industry and primary market you entered in Company Info.
+                                Analyze the competitive intensity and attractiveness of your industry. Adjust descriptions and G.U.T. scores as needed.
                             </p>
+                            
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex gap-2 items-center">
+                                    <label htmlFor="porters-scope-select" className="text-sm font-medium text-gray-700">Analysis Scope:</label>
+                                    <select
+                                        id="porters-scope-select"
+                                        value={selectedPortersScope}
+                                        onChange={(e) => setSelectedPortersScope(e.target.value)}
+                                        className="input-field text-sm w-auto"
+                                    >
+                                        <option value="company">Company Porter's Forces</option>
+                                        {companyData.keyProducts.map((product, index) => (
+                                            <option key={index} value={product}>{product} Porter's Forces</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const suggestedForces = generatePortersForces(companyData.industry, companyData.primaryMarket);
+                                        if (selectedPortersScope === 'company') {
+                                            setPortersForces(suggestedForces);
+                                        } else {
+                                            setProductPortersForces(prev => ({
+                                                ...prev,
+                                                [selectedPortersScope]: suggestedForces
+                                            }));
+                                        }
+                                        alert(`Suggested Porter's forces for "${selectedPortersScope === 'company' ? 'the company' : selectedPortersScope}" have been applied.`);
+                                    }}
+                                    className="button-secondary text-sm flex items-center gap-2"
+                                    title={`Generate and apply suggested Porter's forces for the ${selectedPortersScope === 'company' ? 'company' : selectedPortersScope}. This will overwrite current data for this scope.`}
+                                >
+                                    <i className="fas fa-wand-magic-sparkles"></i>
+                                    Suggest Forces for {selectedPortersScope === 'company' ? 'Company' : selectedPortersScope}
+                                </button>
+                            </div>
 
-                            {(!companyData.industry && !companyData.primaryMarket) && (
+
+                            {(!companyData.industry && !companyData.primaryMarket && selectedPortersScope === 'company') && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
                                     <div className="flex">
                                         <i className="fas fa-exclamation-triangle text-yellow-400 mr-3 mt-1"></i>
                                         <div>
-                                            <h4 className="text-sm font-medium text-yellow-800">Missing Information</h4>
+                                            <h4 className="text-sm font-medium text-yellow-800">Missing Information for Auto-Population</h4>
                                             <p className="text-sm text-yellow-700 mt-1">
-                                                Please fill in the "Industry" and "Primary Market" fields in the "Company Info" tab to auto-populate this section.
+                                                Fill in "Industry" and "Primary Market" in Company Info for tailored company-level suggestions. You can still edit manually.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {Object.entries(portersForces).map(([forceKey, forceDescription]) => (
-                                <div key={forceKey} className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
-                                        {forceKey.replace(/([A-Z])/g, ' \$1').replace('Of', 'of ').replace('Or', 'or ')}
-                                    </label>
-                                    <textarea
-                                        value={forceDescription}
-                                        onChange={(e) => setPortersForces(prev => ({ ...prev, [forceKey]: e.target.value }))}
-                                        className="input-field"
-                                        rows="3"
-                                        placeholder={`Analysis for ${forceKey.replace(/([A-Z])/g, ' \$1').toLowerCase()}...`}
-                                    ></textarea>
+                            {Object.entries(selectedPortersScope === 'company' ? portersForces : (productPortersForces[selectedPortersScope] || portersForces) ).map(([forceKey, forceData]) => {
+                                const gutScore = calculateGUTScore(forceData);
+                                const isDescriptionEditingCurrent = isPortersDescriptionEditing(selectedPortersScope, forceKey);
+
+                                const handleForceChange = (field, value) => {
+                                    const scopeToUpdate = selectedPortersScope;
+                                    if (scopeToUpdate === 'company') {
+                                        setPortersForces(prev => ({
+                                            ...prev,
+                                            [forceKey]: {
+                                                ...prev[forceKey],
+                                                [field]: field === 'description' ? value : parseInt(value)
+                                            }
+                                        }));
+                                    } else {
+                                        setProductPortersForces(prev => ({
+                                            ...prev,
+                                            [scopeToUpdate]: {
+                                                ...prev[scopeToUpdate],
+                                                [forceKey]: {
+                                                    ...(prev[scopeToUpdate] ? prev[scopeToUpdate][forceKey] : {}),
+                                                    [field]: field === 'description' ? value : parseInt(value)
+                                                }
+                                            }
+                                        }));
+                                    }
+                                };
+
+                                return (
+                                    <div key={`${selectedPortersScope}-${forceKey}`} className="mb-6 p-4 border border-gray-200 rounded-lg shadow-sm">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="block text-md font-semibold text-gray-700 capitalize">
+                                                {forceKey.replace(/([A-Z])/g, ' \$1').replace('Of', 'of ').replace('Or', 'or ')}
+                                            </label>
+                                            <span className={`px-3 py-1 rounded-full text-sm font-bold ${getGUTScoreColor(gutScore)}`}>
+                                                G.U.T: {gutScore}
+                                            </span>
+                                        </div>
+
+                                        {isDescriptionEditingCurrent ? (
+                                            <div className="flex items-start">
+                                                <textarea
+                                                    value={forceData.description}
+                                                    onChange={(e) => handleForceChange('description', e.target.value)}
+                                                    className="input-field mb-3 flex-grow"
+                                                    rows="4"
+                                                    placeholder={`Detailed analysis for ${forceKey.replace(/([A-Z])/g, ' \$1').toLowerCase()}...`}
+                                                    autoFocus
+                                                ></textarea>
+                                                <button onClick={() => togglePortersDescriptionEdit(selectedPortersScope, forceKey)} className="ml-2 p-2 text-green-600 hover:text-green-800 self-start">
+                                                    <i className="fas fa-check"></i>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-start">
+                                                <div 
+                                                    className="input-field mb-3 flex-grow min-h-[88px] whitespace-pre-wrap cursor-pointer" 
+                                                    onClick={() => togglePortersDescriptionEdit(selectedPortersScope, forceKey)}
+                                                >
+                                                    {forceData.description || <span className="text-gray-400">No description. Click to edit.</span>}
+                                                </div>
+                                                <button onClick={() => togglePortersDescriptionEdit(selectedPortersScope, forceKey)} className="ml-2 p-1 text-blue-500 hover:text-blue-700 text-xs self-start">
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-3 gap-3 mt-2">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Gravity (1-5)</label>
+                                                <select
+                                                    value={forceData.gravity}
+                                                    onChange={(e) => handleForceChange('gravity', e.target.value)}
+                                                    className="input-field text-sm py-1"
+                                                >
+                                                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Urgency (1-5)</label>
+                                                <select
+                                                    value={forceData.urgency}
+                                                    onChange={(e) => handleForceChange('urgency', e.target.value)}
+                                                    className="input-field text-sm py-1"
+                                                >
+                                                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Tendency (1-5)</label>
+                                                <select
+                                                    value={forceData.tendency}
+                                                    onChange={(e) => handleForceChange('tendency', e.target.value)}
+                                                    className="input-field text-sm py-1"
+                                                >
+                                                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+            
+            // New reusable function for editable lists
+            const renderEditableCompetitorListUI = (list, setList, listNameSingular, listNamePlural, placeholderText = `Enter ${listNameSingular.toLowerCase()} name...`) => {
+                const [newItem, setNewItem] = useState('');
+
+                const addItem = () => {
+                    if (newItem.trim() && !list.includes(newItem.trim())) {
+                        setList(prev => [...prev, newItem.trim()]);
+                        setNewItem('');
+                    } else if (list.includes(newItem.trim())) {
+                        alert(`${listNameSingular} "${newItem.trim()}" is already in the list.`);
+                    }
+                };
+
+                const removeItem = (index) => {
+                    setList(prev => prev.filter((_, i) => i !== index));
+                };
+
+                return (
+                    <div className="form-section">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Identified {listNamePlural}</h3>
+                        <div className="space-y-2 mb-4">
+                            {list.length === 0 && (
+                                <p className="text-gray-500 text-sm">No {listNamePlural.toLowerCase()} identified yet. You can add them manually below or use suggestion features if available for this section.</p>
+                            )}
+                            {list.map((item, index) => (
+                                <div key={`${listNameSingular}-${index}`} className="flex items-center justify-between gap-2 bg-gray-50 p-2 rounded border">
+                                    <span className="flex-1 text-gray-800 text-sm">{item}</span>
+                                    <button
+                                        onClick={() => removeItem(index)}
+                                        className="text-red-500 hover:text-red-700 p-1 text-xs"
+                                        title={`Remove ${listNameSingular}`}
+                                    >
+                                        <i className="fas fa-times"></i>
+                                    </button>
                                 </div>
                             ))}
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Add New {listNameSingular} Manually</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newItem}
+                                    onChange={(e) => setNewItem(e.target.value)}
+                                    className="input-field flex-1"
+                                    placeholder={placeholderText}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            addItem();
+                                        }
+                                    }}
+                                />
+                                <button onClick={addItem} className="button-primary px-4 py-2 text-sm">
+                                    Add {listNameSingular}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
             };
 
-            const renderCompetitorAnalysis = () => {
-                const [newCompetitor, setNewCompetitor] = useState('');
-
-                const addCompetitor = () => {
-                    if (newCompetitor.trim() && !competitors.includes(newCompetitor.trim())) {
-                        setCompetitors(prev => [...prev, newCompetitor.trim()]);
-                        setNewCompetitor('');
-                    }
-                };
-
-                const removeCompetitor = (index) => {
-                    setCompetitors(prev => prev.filter((_, i) => i !== index));
-                };
-
+            const renderInternalIssuesTab_TemporaryCompetitors = () => {
                 return (
                     <div className="space-y-6">
                         <div className="form-section">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Internal Issues</h3>
-                            <p className="text-gray-600 mb-6">
-                                Identify and analyze your key competitors. The list below is pre-populated based on your company name.
+                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Internal Issues - Competitor List</h3>
+                             <p className="text-gray-600 mb-6">
+                                Identify key competitors related to internal issues or specific operational aspects. This list is separate from the main "Competitors Analysis" tab.
                             </p>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Identified Competitors</label>
-                                <div className="space-y-2">
-                                    {competitors.length === 0 && (
-                                        <p className="text-gray-500 text-sm">No competitors identified yet. Research your company in the "Company Info" tab.</p>
-                                    )}
-                                    {competitors.map((competitor, index) => (
-                                        <div key={index} className="flex items-center gap-2 bg-gray-50 p-2 rounded border">
-                                            <span className="flex-1 text-gray-800">{competitor}</span>
-                                            <button
-                                                onClick={() => removeCompetitor(index)}
-                                                className="text-red-500 hover:text-red-700 p-1"
-                                            >
-                                                <i className="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="mt-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Add New Competitor Manually</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newCompetitor}
-                                        onChange={(e) => setNewCompetitor(e.target.value)}
-                                        className="input-field flex-1"
-                                        placeholder="Enter competitor name..."
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                addCompetitor();
-                                            }
-                                        }}
-                                    />
-                                    <button onClick={addCompetitor} className="button-primary">
-                                        Add
-                                    </button>
-                                </div>
-                            </div>
+                            <button
+                                onClick={() => {
+                                    const sample = generateCompetitors(companyData.name, companyData.industry);
+                                    setCompetitors(sample);
+                                    alert('Sample competitors for Internal Issues generated!');
+                                }}
+                                className="button-secondary mb-4" // Using secondary to differentiate
+                            >
+                                Suggest Sample Competitors (for Internal Issues)
+                            </button>
+                            {renderEditableCompetitorListUI(
+                                competitors,
+                                setCompetitors,
+                                "Competitor (Internal Issues)",
+                                "Competitors (Internal Issues)",
+                                "Enter competitor name for internal issues..."
+                            )}
+                        </div>
+                         {/* Placeholder for other internal issues content */}
+                         <div className="form-section bg-gray-50">
+                            <h4 className="text-md font-semibold text-gray-700">Other Internal Analysis Tools (Coming Soon)</h4>
+                            <p className="text-sm text-gray-500">Tools for analyzing other internal issues will be available here.</p>
+                         </div>
+                    </div>
+                );
+            };
+            
+            const renderCompetitorsAnalysisTab = () => {
+                return (
+                    <div className="space-y-6">
+                        <div className="form-section">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Competitors Analysis</h3>
+                            <p className="text-gray-600 mb-6">
+                                Identify and analyze your key market competitors. Use the button below to generate a sample list based on company information.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    const sample = generateCompetitors(companyData.name, companyData.industry);
+                                    setNewCompetitorsList(sample);
+                                    alert('Sample market competitors generated!');
+                                }}
+                                className="button-primary mb-4"
+                            >
+                                Suggest Sample Market Competitors
+                            </button>
+                            {renderEditableCompetitorListUI(
+                                newCompetitorsList,
+                                setNewCompetitorsList,
+                                "Market Competitor",
+                                "Market Competitors",
+                                "Enter market competitor name..."
+                            )}
+                        </div>
+                        {/* Placeholder for detailed analysis of each competitor in newCompetitorsList */}
+                        <div className="form-section bg-gray-50">
+                            <h4 className="text-md font-semibold text-gray-700">Detailed Competitor Breakdown (Coming Soon)</h4>
+                            <p className="text-sm text-gray-500">Tools for detailed analysis of each market competitor will appear here.</p>
                         </div>
                     </div>
                 );
@@ -1417,6 +1974,175 @@
                 </div>
             );
 
+            const renderCompetitorsAnalysisTab = () => {
+                return (
+                    <div className="tab-content">
+                        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                            <p className="font-bold">Competitors Analysis</p>
+                            <p>Content for this section will be implemented soon.</p>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderClientsPersonasTab = () => {
+                const currentPersonas = selectedPersonaScope === 'company' ? companyPersonas : (productPersonas[selectedPersonaScope] || []);
+
+                const handleSuggestPersonas = () => {
+                    const newPersonas = generateSampleClientPersonas(3, companyData.industry, selectedPersonaScope === 'company' ? null : selectedPersonaScope);
+                    if (selectedPersonaScope === 'company') {
+                        setCompanyPersonas(newPersonas);
+                    } else {
+                        setProductPersonas(prev => ({
+                            ...prev,
+                            [selectedPersonaScope]: newPersonas
+                        }));
+                    }
+                    alert(`Generated ${newPersonas.length} sample personas for ${selectedPersonaScope === 'company' ? 'the company' : selectedPersonaScope}.`);
+                };
+
+                const handleAddNewPersona = () => {
+                    const newPersona = {
+                        id: `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: "New Persona",
+                        age: 30,
+                        occupation: "Occupation",
+                        bio: "Bio - describe persona here.",
+                        goals: ["Goal 1", "Goal 2"],
+                        frustrations: ["Frustration 1", "Frustration 2"],
+                        gravity: 3,
+                        urgency: 3,
+                        tendency: 3,
+                    };
+                    if (selectedPersonaScope === 'company') {
+                        setCompanyPersonas(prev => [...prev, newPersona]);
+                    } else {
+                        setProductPersonas(prev => ({
+                            ...prev,
+                            [selectedPersonaScope]: [...(prev[selectedPersonaScope] || []), newPersona]
+                        }));
+                    }
+                };
+
+                const handleRemovePersona = (personaIdToRemove) => {
+                    if (selectedPersonaScope === 'company') {
+                        setCompanyPersonas(prev => prev.filter(p => p.id !== personaIdToRemove));
+                    } else {
+                        setProductPersonas(prev => ({
+                            ...prev,
+                            [selectedPersonaScope]: (prev[selectedPersonaScope] || []).filter(p => p.id !== personaIdToRemove)
+                        }));
+                    }
+                };
+
+
+                return (
+                    <div className="space-y-6">
+                        <div className="form-section">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-800">Client Personas</h3>
+                                    <p className="text-gray-600">Define and manage client personas for company or specific products.</p>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex gap-2 items-center">
+                                    <label htmlFor="persona-scope-select" className="text-sm font-medium text-gray-700">Analysis Scope:</label>
+                                    <select
+                                        id="persona-scope-select"
+                                        value={selectedPersonaScope}
+                                        onChange={(e) => setSelectedPersonaScope(e.target.value)}
+                                        className="input-field text-sm w-auto"
+                                    >
+                                        <option value="company">Company-Wide Personas</option>
+                                        {companyData.keyProducts.map((product, index) => (
+                                            <option key={index} value={product}>{product} Personas</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleSuggestPersonas}
+                                        className="button-secondary text-sm flex items-center gap-2"
+                                        title={`Generate sample personas for ${selectedPersonaScope === 'company' ? 'the company' : selectedPersonaScope}. This will overwrite current personas for this scope.`}
+                                    >
+                                        <i className="fas fa-wand-magic-sparkles"></i>
+                                        Suggest Personas
+                                    </button>
+                                    <button
+                                        onClick={handleAddNewPersona}
+                                        className="button-primary text-sm flex items-center gap-2"
+                                        title={`Add a new blank persona to the ${selectedPersonaScope === 'company' ? 'company' : selectedPersonaScope} scope.`}
+                                    >
+                                        <i className="fas fa-plus"></i>
+                                        Add New Persona
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-section">
+                            <h4 className="text-md font-semibold text-gray-700 mb-4">
+                                Personas for: {selectedPersonaScope === 'company' ? 'Company-Wide' : selectedPersonaScope} ({currentPersonas.length})
+                            </h4>
+                            {currentPersonas.length === 0 ? (
+                                <p className="text-gray-500 p-4 text-center">No personas defined for this scope. Click "Suggest Personas" or "Add New Persona".</p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {currentPersonas.map(persona => (
+                                        <div key={persona.id} className="border p-4 rounded-lg shadow-lg bg-white hover:shadow-xl transition-shadow duration-200">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h5 className="text-lg font-bold text-blue-700">{persona.name}</h5>
+                                                <button 
+                                                    onClick={() => handleRemovePersona(persona.id)}
+                                                    className="text-red-400 hover:text-red-600 p-1"
+                                                    title="Remove Persona"
+                                                >
+                                                    <i className="fas fa-times-circle"></i>
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-2">{persona.occupation}, Age: {persona.age}</p>
+                                            
+                                            <div className="mb-3">
+                                                <h6 className="text-xs font-semibold text-gray-600 mb-1">Bio:</h6>
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{persona.bio}</p>
+                                            </div>
+                                            
+                                            <div className="mb-3">
+                                                <h6 className="text-xs font-semibold text-gray-600 mb-1">Goals:</h6>
+                                                <ul className="list-disc list-inside text-sm text-gray-700">
+                                                    {persona.goals.map((goal, i) => <li key={i}>{goal}</li>)}
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="mb-3">
+                                                <h6 className="text-xs font-semibold text-gray-600 mb-1">Frustrations:</h6>
+                                                <ul className="list-disc list-inside text-sm text-gray-700">
+                                                    {persona.frustrations.map((frustration, i) => <li key={i}>{frustration}</li>)}
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="border-t pt-3 mt-3">
+                                                <h6 className="text-xs font-semibold text-gray-600 mb-1">G.U.T. Scores:</h6>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-700">G: {persona.gravity}</span>
+                                                    <span className="text-gray-700">U: {persona.urgency}</span>
+                                                    <span className="text-gray-700">T: {persona.tendency}</span>
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getGUTScoreColor(calculateGUTScore(persona))}`}>
+                                                        Total: {calculateGUTScore(persona)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                             <p className="text-center text-gray-400 mt-8 text-sm">Editing individual persona fields will be implemented in a future step.</p>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderCurrentPhase = () => {
                 switch (currentPhase) {
                     case 'company-info':
@@ -1425,8 +2151,12 @@
                         return renderPestelAnalysis();
                     case 'porter':
                         return renderPortersSixForces();
-                    case 'competitor':
-                        return renderCompetitorAnalysis();
+                    case 'competitor': // This is the "Internal Issues" tab
+                        return renderInternalIssuesTab_TemporaryCompetitors();
+                    case 'competitors-analysis': // This is the new "Competitors Analysis" tab
+                        return renderCompetitorsAnalysisTab();
+                    case 'clients-personas':
+                        return renderClientsPersonasTab();
                     default:
                         return renderOtherPhases();
                 }
@@ -1481,3 +2211,7 @@
     </script>
 </body>
 </html>
+
+[end of index.html]
+
+[end of index.html]
