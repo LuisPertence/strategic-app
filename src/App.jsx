@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import useLocalStorage from './hooks/useLocalStorage';
-import { generateCompanyData, generateCompanyPestelData, generateCompetitors, generatePortersForces } from './utils/generators';
+import { researchCompanyData } from './utils/companyApi';
+import { generateCompanyPestelData, generateCompetitors, generatePortersForces } from './utils/generators';
+import CompanySearch from './components/CompanySearch';
 import CompanyInfo from './components/CompanyInfo';
 import PestelAnalysis from './components/PestelAnalysis';
 import PortersSixForces from './components/PortersSixForces';
@@ -34,7 +36,7 @@ const defaultPortersForces = {
 };
 
 export default function App() {
-  const [currentPhase, setCurrentPhase] = useLocalStorage('sps-currentPhase', 'company-info');
+  const [currentPhase, setCurrentPhase] = useLocalStorage('sps-currentPhase', 'search');
   const [companyData, setCompanyData] = useLocalStorage('sps-companyData', defaultCompanyData);
   const [companyPestelData, setCompanyPestelData] = useLocalStorage('sps-companyPestelData', defaultPestelData);
   const [productPestels, setProductPestels] = useLocalStorage('sps-productPestels', {});
@@ -44,6 +46,7 @@ export default function App() {
   const [internalIssues, setInternalIssues] = useLocalStorage('sps-internalIssues', { strengths: [], weaknesses: [] });
   const [swotData, setSwotData] = useLocalStorage('sps-swotData', { strengths: [], weaknesses: [], opportunities: [], threats: [] });
   const [customerSegments, setCustomerSegments] = useLocalStorage('sps-customerSegments', []);
+  const [isResearching, setIsResearching] = useState(false);
 
   useEffect(() => {
     if (companyData.industry || companyData.primaryMarket) {
@@ -89,26 +92,28 @@ export default function App() {
     }
   };
 
-  const researchCompany = async () => {
-    const companyName = companyData.name.trim();
-    if (!companyName) return;
+  const handleCompanySelected = async (companyName) => {
+    setIsResearching(true);
 
     try {
-      setCompanyData(prev => ({ ...prev, description: 'Researching company information...' }));
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Fetch real data from Wikipedia/Wikidata
+      const realData = await researchCompanyData(companyName);
 
-      const researchedData = generateCompanyData(companyName);
-      const companyPestelAnalysis = generateCompanyPestelData(companyName, researchedData.industry);
+      // Use the real industry for generating PESTEL and Porter's data
+      const industry = realData.industry || 'Technology';
+      const companyPestelAnalysis = generateCompanyPestelData(companyName, industry);
       const generatedCompetitors = generateCompetitors(companyName);
-      const generatedPortersForces = generatePortersForces(researchedData.industry, researchedData.primaryMarket);
+      const generatedPortersForces = generatePortersForces(industry, realData.primaryMarket || 'global');
 
-      setCompanyData(prev => ({ ...prev, ...researchedData, name: companyName }));
+      // Set all the data
+      setCompanyData({ ...defaultCompanyData, ...realData });
       setCompanyPestelData(companyPestelAnalysis);
       setCompetitors(generatedCompetitors);
       setPortersForces(generatedPortersForces);
 
+      // Initialize product PESTELs
       const newProductPestels = {};
-      researchedData.keyProducts.forEach(product => {
+      (realData.keyProducts || []).forEach(product => {
         const initialProductPestel = {};
         Object.entries(companyPestelAnalysis).forEach(([category, data]) => {
           initialProductPestel[category] = {
@@ -119,11 +124,44 @@ export default function App() {
         newProductPestels[product] = initialProductPestel;
       });
       setProductPestels(newProductPestels);
+
+      // Navigate to company info
+      setCurrentPhase('company-info');
     } catch (error) {
       console.error('Research error:', error);
-      setCompanyData(prev => ({ ...prev, description: '' }));
+    } finally {
+      setIsResearching(false);
     }
   };
+
+  const handleNewSearch = () => {
+    setCompanyData(defaultCompanyData);
+    setCompanyPestelData(defaultPestelData);
+    setProductPestels({});
+    setSelectedPestelScope('company');
+    setCompetitors([]);
+    setPortersForces(defaultPortersForces);
+    setInternalIssues({ strengths: [], weaknesses: [] });
+    setSwotData({ strengths: [], weaknesses: [], opportunities: [], threats: [] });
+    setCustomerSegments([]);
+    setCurrentPhase('search');
+  };
+
+  const researchCompany = async () => {
+    const companyName = companyData.name.trim();
+    if (!companyName) return;
+    await handleCompanySelected(companyName);
+  };
+
+  // Search screen is full-page, no tabs
+  if (currentPhase === 'search') {
+    return (
+      <CompanySearch
+        onCompanySelected={handleCompanySelected}
+        isResearching={isResearching}
+      />
+    );
+  }
 
   const renderCurrentPhase = () => {
     switch (currentPhase) {
@@ -200,7 +238,21 @@ export default function App() {
   return (
     <div className="strategic-planning-suite">
       <div className="header">
-        <h1 className="text-2xl font-bold">Strategic Planning Suite</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Strategic Planning Suite</h1>
+          <button
+            onClick={handleNewSearch}
+            className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-md hover:bg-opacity-30 transition-colors text-sm flex items-center gap-2"
+          >
+            <i className="fas fa-search"></i>
+            New Company
+          </button>
+        </div>
+        {companyData.name && (
+          <p className="text-blue-200 text-sm mt-1">
+            Analyzing: {companyData.name}
+          </p>
+        )}
       </div>
       <div className="nav-tabs">
         {phases.map((phase) => (
