@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { companySuggestions, industrySuggestions } from '../data/suggestions';
 
-export default function CompanyInfo({ companyData, setCompanyData, onProductAdded, onProductRemoved }) {
+export default function CompanyInfo({ companyData, setCompanyData, onProductAdded, onProductRemoved, researchCompany }) {
   const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
   const [filteredCompanySuggestions, setFilteredCompanySuggestions] = useState([]);
   const companyNameRef = useRef(null);
@@ -120,6 +120,14 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
       <div className="form-section">
         <div className="flex justify-between items-center mb-4">
           <h4 className="text-lg font-semibold text-gray-800">Basic Information</h4>
+          <button
+            onClick={researchCompany}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+            disabled={!companyData.name}
+          >
+            <i className="fas fa-search"></i>
+            Research Company
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
