@@ -84,7 +84,12 @@ async function aiResearch(companyName) {
     coreValues: Array.isArray(data.coreValues) ? data.coreValues : [],
     keyExecutives: Array.isArray(data.keyExecutives) ? data.keyExecutives : [],
     _thumbnail: null,
-    _wikiUrl: ''
+    _wikiUrl: '',
+    _phone: data._phone || '',
+    _placesAddress: data._placesAddress || '',
+    _mapsUrl: data._mapsUrl || '',
+    _rating: data._rating || null,
+    _ratingCount: data._ratingCount || null
   };
 }
 

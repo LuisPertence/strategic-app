@@ -3,5 +3,6 @@ main = "index.js"
 compatibility_date = "2024-01-01"
 
 # Secrets (set via `wrangler secret put`):
-#   ANTHROPIC_API_KEY  — your Anthropic API key
-#   AUTH_TOKEN         — a password you choose to protect this endpoint
+#   ANTHROPIC_API_KEY       — your Anthropic API key
+#   GOOGLE_PLACES_API_KEY   — your Google Cloud API key (with Places API enabled)
+#   AUTH_TOKEN              — a password you choose to protect this endpoint
