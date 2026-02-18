@@ -1,0 +1,7 @@
+name = "company-research-proxy"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Secrets (set via `wrangler secret put`):
+#   ANTHROPIC_API_KEY  — your Anthropic API key
+#   AUTH_TOKEN         — a password you choose to protect this endpoint

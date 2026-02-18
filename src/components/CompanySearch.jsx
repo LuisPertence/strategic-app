@@ -161,7 +161,7 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
               Researching {query}...
             </h3>
             <p className="search-researching-subtitle">
-              Fetching company information from Wikipedia and Wikidata
+              Gathering company information...
             </p>
             <div className="search-progress-bar">
               <div className="search-progress-fill"></div>
