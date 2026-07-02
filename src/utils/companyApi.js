@@ -3,11 +3,49 @@ const RESEARCH_AUTH_TOKEN = import.meta.env.VITE_RESEARCH_AUTH_TOKEN || '';
 const WIKI_API = 'https://en.wikipedia.org/w/api.php';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 
-// ─── Search (Wikidata - works fine for finding company names) ────────────────
+// ─── Search (Google Places via worker, with Wikidata fallback) ──────────────
 
 export async function searchCompanies(query) {
   if (!query || query.length < 2) return [];
 
+  if (RESEARCH_API_URL) {
+    try {
+      const results = await placesSearch(query);
+      if (results.length > 0) return results;
+    } catch {
+      // fall through to Wikidata
+    }
+  }
+
+  return wikiSearch(query);
+}
+
+async function placesSearch(query) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (RESEARCH_AUTH_TOKEN) {
+    headers['Authorization'] = `Bearer ${RESEARCH_AUTH_TOKEN}`;
+  }
+
+  const searchUrl = RESEARCH_API_URL.replace(/\/+$/, '') + '/search';
+  const res = await fetch(searchUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ query })
+  });
+
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map(place => ({
+    name: place.name || '',
+    description: [place.address, ...(place.types || []).map(formatPlaceType)].filter(Boolean).join(' · ')
+  }));
+}
+
+function formatPlaceType(type) {
+  return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+async function wikiSearch(query) {
   const params = new URLSearchParams({
     action: 'wbsearchentities',
     search: query,
@@ -24,7 +62,6 @@ export async function searchCompanies(query) {
     return (data.search || []).map(entity => ({
       name: entity.label || '',
       description: entity.description || '',
-      url: `https://www.wikidata.org/wiki/${entity.id}`
     }));
   } catch {
     return [];

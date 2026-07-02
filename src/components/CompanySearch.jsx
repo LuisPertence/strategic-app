@@ -56,14 +56,19 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
   };
 
   const handleConfirm = () => {
-    if (selectedCompany) {
-      onCompanySelected(selectedCompany.name);
+    const name = selectedCompany?.name || query.trim();
+    if (name) {
+      onCompanySelected(name);
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && selectedCompany) {
-      handleConfirm();
+    if (e.key === 'Enter') {
+      if (selectedCompany) {
+        handleConfirm();
+      } else if (query.trim().length >= 2 && !showSuggestions) {
+        setSelectedCompany({ name: query.trim(), description: '' });
+      }
     }
   };
 
@@ -148,6 +153,25 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
             <button className="search-confirm-btn" onClick={handleConfirm}>
               <i className="fas fa-arrow-right mr-2"></i>
               Research & Analyze
+            </button>
+          </div>
+        )}
+
+        {!selectedCompany && !isResearching && !showSuggestions && query.trim().length >= 2 && (
+          <div className="search-selected-card">
+            <div className="search-selected-info">
+              <div className="search-selected-desc">
+                Company not in the list? You can still research it.
+              </div>
+            </div>
+            <button
+              className="search-confirm-btn"
+              onClick={() => {
+                setSelectedCompany({ name: query.trim(), description: '' });
+              }}
+            >
+              <i className="fas fa-search mr-2"></i>
+              Search "{query.trim()}"
             </button>
           </div>
         )}

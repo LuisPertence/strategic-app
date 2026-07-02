@@ -49,45 +49,124 @@ export default {
       });
     }
 
-    // ── Parse request ─────────────────────────────────────────────────────────
-    let companyName;
-    try {
-      const body = await request.json();
-      companyName = body.companyName;
-    } catch {
-      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // ── Routing ───────────────────────────────────────────────────────────────
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+
+    if (path === '/search') {
+      return handleSearch(request, env, corsHeaders);
     }
 
-    if (!companyName || typeof companyName !== 'string' || companyName.length > 200) {
-      return new Response(JSON.stringify({ error: 'Invalid company name' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    try {
-      // ── Step 1: Google Places — factual data ──────────────────────────────
-      const placesData = await fetchGooglePlaces(companyName, env.GOOGLE_PLACES_API_KEY);
-
-      // ── Step 2: Claude — strategic enrichment using Places context ────────
-      const companyData = await enrichWithClaude(companyName, placesData, env.ANTHROPIC_API_KEY);
-
-      return new Response(JSON.stringify(companyData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: 'Research failed', message: err.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    return handleResearch(request, env, corsHeaders);
   }
 };
 
-// ── Google Places API (New) ───────────────────────────────────────────────────
+// ── /search — Google Places autocomplete for any business ────────────────────
+
+async function handleSearch(request, env, corsHeaders) {
+  let query;
+  try {
+    const body = await request.json();
+    query = body.query;
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!query || typeof query !== 'string' || query.length < 2 || query.length > 200) {
+    return new Response(JSON.stringify({ results: [] }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const results = await searchGooglePlaces(query, env.GOOGLE_PLACES_API_KEY);
+    return new Response(JSON.stringify({ results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ results: [], error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// ── / — full research (Google Places + Claude) ───────────────────────────────
+
+async function handleResearch(request, env, corsHeaders) {
+  let companyName;
+  try {
+    const body = await request.json();
+    companyName = body.companyName;
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!companyName || typeof companyName !== 'string' || companyName.length > 200) {
+    return new Response(JSON.stringify({ error: 'Invalid company name' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const placesData = await fetchGooglePlaces(companyName, env.GOOGLE_PLACES_API_KEY);
+    const companyData = await enrichWithClaude(companyName, placesData, env.ANTHROPIC_API_KEY);
+
+    return new Response(JSON.stringify(companyData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Research failed', message: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// ── Google Places Search (lightweight, for autocomplete) ─────────────────────
+
+async function searchGooglePlaces(query, apiKey) {
+  if (!apiKey) return [];
+
+  try {
+    const searchRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.types,places.businessStatus'
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        maxResultCount: 8
+      })
+    });
+
+    if (!searchRes.ok) return [];
+
+    const searchData = await searchRes.json();
+    const places = searchData.places || [];
+
+    return places
+      .filter(p => p.businessStatus !== 'CLOSED_PERMANENTLY')
+      .map(p => ({
+        name: p.displayName?.text || '',
+        address: p.formattedAddress || '',
+        types: (p.types || []).slice(0, 3)
+      }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Google Places API (New) — full detail for research ───────────────────────
 
 async function fetchGooglePlaces(companyName, apiKey) {
   if (!apiKey) return null;
