@@ -7,6 +7,7 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const debounceRef = useRef(null);
@@ -25,6 +26,12 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const fetchSuggestions = useCallback(async (value) => {
     if (value.length < 2) {
       setSuggestions([]);
@@ -36,6 +43,7 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
     const results = await searchCompanies(value);
     setSuggestions(results);
     setShowSuggestions(results.length > 0);
+    setHighlightedIndex(-1);
     setIsLoading(false);
   }, []);
 
@@ -43,6 +51,7 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
     const value = e.target.value;
     setQuery(value);
     setSelectedCompany(null);
+    setHighlightedIndex(-1);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(value), 300);
@@ -53,19 +62,58 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
     setSelectedCompany(suggestion);
     setShowSuggestions(false);
     setSuggestions([]);
+    setHighlightedIndex(-1);
   };
 
   const handleConfirm = () => {
-    if (selectedCompany) {
-      onCompanySelected(selectedCompany.name);
+    const name = selectedCompany?.name || query.trim();
+    if (name) {
+      onCompanySelected(name);
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && selectedCompany) {
-      handleConfirm();
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIndex(prev =>
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev =>
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Enter' && highlightedIndex >= 0) {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[highlightedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+        return;
+      }
+    }
+
+    if (e.key === 'Enter') {
+      if (selectedCompany) {
+        handleConfirm();
+      } else if (query.trim().length >= 2 && !showSuggestions) {
+        setSelectedCompany({ name: query.trim(), description: '' });
+      }
     }
   };
+
+  const showManualSearchCard = !selectedCompany
+    && !isResearching
+    && !showSuggestions
+    && !isLoading
+    && query.trim().length >= 2;
 
   return (
     <div className="search-screen">
@@ -97,6 +145,10 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
               className="search-input"
               placeholder="Type a company name..."
               disabled={isResearching}
+              role="combobox"
+              aria-expanded={showSuggestions}
+              aria-autocomplete="list"
+              aria-activedescendant={highlightedIndex >= 0 ? `suggestion-${highlightedIndex}` : undefined}
             />
             {isLoading && (
               <div className="search-spinner">
@@ -106,12 +158,16 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
           </div>
 
           {showSuggestions && suggestions.length > 0 && (
-            <div className="search-suggestions">
+            <div className="search-suggestions" role="listbox">
               {suggestions.map((suggestion, index) => (
                 <div
                   key={index}
-                  className="search-suggestion-item"
+                  id={`suggestion-${index}`}
+                  role="option"
+                  aria-selected={index === highlightedIndex}
+                  className={`search-suggestion-item${index === highlightedIndex ? ' search-suggestion-highlighted' : ''}`}
                   onClick={() => handleSelectSuggestion(suggestion)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
                 >
                   <div className="search-suggestion-name">
                     <i className="fas fa-building search-suggestion-icon"></i>
@@ -152,6 +208,25 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
           </div>
         )}
 
+        {showManualSearchCard && (
+          <div className="search-selected-card">
+            <div className="search-selected-info">
+              <div className="search-selected-desc">
+                Company not in the list? You can still research it.
+              </div>
+            </div>
+            <button
+              className="search-confirm-btn"
+              onClick={() => {
+                setSelectedCompany({ name: query.trim(), description: '' });
+              }}
+            >
+              <i className="fas fa-search mr-2"></i>
+              Search "{query.trim()}"
+            </button>
+          </div>
+        )}
+
         {isResearching && (
           <div className="search-researching">
             <div className="search-researching-spinner">
@@ -161,7 +236,7 @@ export default function CompanySearch({ onCompanySelected, isResearching }) {
               Researching {query}...
             </h3>
             <p className="search-researching-subtitle">
-              Fetching company information from Wikipedia and Wikidata
+              Finding business details, industry data, and strategic information
             </p>
             <div className="search-progress-bar">
               <div className="search-progress-fill"></div>

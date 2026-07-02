@@ -1,20 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { companySuggestions, industrySuggestions } from '../data/suggestions';
+import { industrySuggestions } from '../data/suggestions';
 
 export default function CompanyInfo({ companyData, setCompanyData, onProductAdded, onProductRemoved, researchCompany }) {
-  const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
-  const [filteredCompanySuggestions, setFilteredCompanySuggestions] = useState([]);
-  const companyNameRef = useRef(null);
-
   const [showIndustrySuggestions, setShowIndustrySuggestions] = useState(false);
   const [filteredIndustrySuggestions, setFilteredIndustrySuggestions] = useState([]);
+  const [isReloading, setIsReloading] = useState(false);
   const industryRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (companyNameRef.current && !companyNameRef.current.contains(event.target)) {
-        setShowCompanySuggestions(false);
-      }
       if (industryRef.current && !industryRef.current.contains(event.target)) {
         setShowIndustrySuggestions(false);
       }
@@ -22,26 +16,6 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleCompanyNameChange = (value) => {
-    setCompanyData(prev => ({ ...prev, name: value }));
-    if (value.length > 0) {
-      const filtered = companySuggestions.filter(c =>
-        c.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredCompanySuggestions(filtered);
-      setShowCompanySuggestions(filtered.length > 0);
-    } else {
-      setShowCompanySuggestions(false);
-      setFilteredCompanySuggestions([]);
-    }
-  };
-
-  const selectCompanySuggestion = (company) => {
-    setCompanyData(prev => ({ ...prev, name: company }));
-    setShowCompanySuggestions(false);
-    setFilteredCompanySuggestions([]);
-  };
 
   const handleIndustryChange = (value) => {
     setCompanyData(prev => ({ ...prev, industry: value }));
@@ -64,12 +38,13 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
   };
 
   const addArrayItem = (newItem, fieldName) => {
-    if (newItem.trim()) {
-      const trimmed = newItem.trim();
-      setCompanyData(prev => ({ ...prev, [fieldName]: [...prev[fieldName], trimmed] }));
-      if (fieldName === 'keyProducts') {
-        onProductAdded(trimmed);
-      }
+    const trimmed = newItem.trim();
+    if (!trimmed) return;
+    const existing = companyData[fieldName].map(v => v.toLowerCase());
+    if (existing.includes(trimmed.toLowerCase())) return;
+    setCompanyData(prev => ({ ...prev, [fieldName]: [...prev[fieldName], trimmed] }));
+    if (fieldName === 'keyProducts') {
+      onProductAdded(trimmed);
     }
   };
 
@@ -81,6 +56,16 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
     }));
     if (fieldName === 'keyProducts') {
       onProductRemoved(itemToRemove);
+    }
+  };
+
+  const handleReResearch = async () => {
+    if (!companyData.name.trim() || isReloading) return;
+    setIsReloading(true);
+    try {
+      await researchCompany();
+    } finally {
+      setIsReloading(false);
     }
   };
 
@@ -96,8 +81,11 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
     return Math.round((totalCompleted / totalFields) * 100);
   };
 
+  const hasPlacesData = companyData._placesAddress || companyData._phone || companyData._rating;
+
   return (
     <div className="space-y-6">
+      {/* Header with progress */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -117,53 +105,75 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
         </div>
       </div>
 
+      {/* Google Places info card */}
+      {hasPlacesData && (
+        <div className="form-section bg-blue-50 border-blue-200">
+          <div className="flex items-start gap-3">
+            <div className="text-blue-500 mt-1">
+              <i className="fas fa-map-marker-alt text-lg"></i>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">Business Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                {companyData._placesAddress && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <i className="fas fa-location-dot text-blue-400 w-4"></i>
+                    <span>{companyData._placesAddress}</span>
+                  </div>
+                )}
+                {companyData._phone && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <i className="fas fa-phone text-blue-400 w-4"></i>
+                    <span>{companyData._phone}</span>
+                  </div>
+                )}
+                {companyData._rating && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <i className="fas fa-star text-yellow-400 w-4"></i>
+                    <span>{companyData._rating}/5{companyData._ratingCount ? ` (${companyData._ratingCount.toLocaleString()} reviews)` : ''}</span>
+                  </div>
+                )}
+                {companyData._mapsUrl && (
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-map text-blue-400 w-4"></i>
+                    <a href={companyData._mapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      View on Google Maps
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Basic Information */}
       <div className="form-section">
         <div className="flex justify-between items-center mb-4">
           <h4 className="text-lg font-semibold text-gray-800">Basic Information</h4>
           <button
-            onClick={researchCompany}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
-            disabled={!companyData.name}
+            onClick={handleReResearch}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!companyData.name || isReloading}
           >
-            <i className="fas fa-search"></i>
-            Research Company
+            <i className={`fas ${isReloading ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
+            {isReloading ? 'Researching...' : 'Re-research'}
           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 relative" ref={companyNameRef}>
+          {/* Company Name — editable text, no autocomplete since user already chose from search */}
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Name * <span className="text-red-500">Required</span>
+              Company Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={companyData.name}
-              onChange={(e) => handleCompanyNameChange(e.target.value)}
-              onFocus={() => {
-                if (companyData.name.length > 0) {
-                  const filtered = companySuggestions.filter(c =>
-                    c.toLowerCase().includes(companyData.name.toLowerCase())
-                  );
-                  setFilteredCompanySuggestions(filtered);
-                  setShowCompanySuggestions(filtered.length > 0);
-                }
-              }}
+              onChange={(e) => setCompanyData(prev => ({ ...prev, name: e.target.value }))}
               className="input-field"
               placeholder="Enter company name..."
             />
-            {showCompanySuggestions && filteredCompanySuggestions.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                {filteredCompanySuggestions.slice(0, 8).map((suggestion, index) => (
-                  <div
-                    key={index}
-                    onClick={() => selectCompanySuggestion(suggestion)}
-                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                  >
-                    <div className="font-medium text-gray-800">{suggestion}</div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div>
@@ -175,12 +185,14 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
               className="input-field"
               placeholder="e.g., 2010"
               min="1800"
-              max={new Date().getFullYear()}
+              max="2026"
             />
           </div>
 
           <div ref={industryRef} className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Industry *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Industry <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               value={companyData.industry}
@@ -213,22 +225,58 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Primary Market *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Primary Market <span className="text-red-500">*</span>
+            </label>
             <select
               value={companyData.primaryMarket}
               onChange={(e) => setCompanyData(prev => ({ ...prev, primaryMarket: e.target.value }))}
               className="input-field"
             >
               <option value="">Select Primary Market</option>
-              <option value="australia">Australia</option>
-              <option value="united-states">United States</option>
-              <option value="global">Global</option>
-              <option value="other">Other</option>
+              <optgroup label="Americas">
+                <option value="united-states">United States</option>
+                <option value="canada">Canada</option>
+                <option value="brazil">Brazil</option>
+                <option value="mexico">Mexico</option>
+                <option value="latin-america">Latin America</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option value="united-kingdom">United Kingdom</option>
+                <option value="germany">Germany</option>
+                <option value="france">France</option>
+                <option value="spain">Spain</option>
+                <option value="italy">Italy</option>
+                <option value="netherlands">Netherlands</option>
+                <option value="europe">Europe (Multi-country)</option>
+              </optgroup>
+              <optgroup label="Asia-Pacific">
+                <option value="australia">Australia</option>
+                <option value="new-zealand">New Zealand</option>
+                <option value="japan">Japan</option>
+                <option value="china">China</option>
+                <option value="india">India</option>
+                <option value="south-korea">South Korea</option>
+                <option value="southeast-asia">Southeast Asia</option>
+              </optgroup>
+              <optgroup label="Middle East & Africa">
+                <option value="uae">UAE</option>
+                <option value="saudi-arabia">Saudi Arabia</option>
+                <option value="south-africa">South Africa</option>
+                <option value="middle-east">Middle East</option>
+                <option value="africa">Africa</option>
+              </optgroup>
+              <optgroup label="Multi-Region">
+                <option value="global">Global</option>
+                <option value="other">Other</option>
+              </optgroup>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Business Model *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Business Model <span className="text-red-500">*</span>
+            </label>
             <select
               value={companyData.businessModel}
               onChange={(e) => setCompanyData(prev => ({ ...prev, businessModel: e.target.value }))}
@@ -237,8 +285,15 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
               <option value="">Select Business Model</option>
               <option value="b2b">B2B (Business to Business)</option>
               <option value="b2c">B2C (Business to Consumer)</option>
+              <option value="b2b2c">B2B2C (Business to Business to Consumer)</option>
               <option value="saas">SaaS (Software as a Service)</option>
               <option value="e-commerce">E-commerce</option>
+              <option value="marketplace">Marketplace / Platform</option>
+              <option value="franchise">Franchise</option>
+              <option value="subscription">Subscription</option>
+              <option value="freemium">Freemium</option>
+              <option value="d2c">D2C (Direct to Consumer)</option>
+              <option value="consulting">Consulting / Services</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -283,13 +338,26 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-            <input
-              type="url"
-              value={companyData.website}
-              onChange={(e) => setCompanyData(prev => ({ ...prev, website: e.target.value }))}
-              className="input-field"
-              placeholder="https://www.company.com"
-            />
+            <div className="relative">
+              <input
+                type="url"
+                value={companyData.website}
+                onChange={(e) => setCompanyData(prev => ({ ...prev, website: e.target.value }))}
+                className="input-field"
+                placeholder="https://www.company.com"
+              />
+              {companyData.website && (
+                <a
+                  href={companyData.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700"
+                  title="Open website"
+                >
+                  <i className="fas fa-external-link-alt text-sm"></i>
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
@@ -305,37 +373,19 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
         </div>
       </div>
 
+      {/* Products & Services */}
       <div className="form-section">
         <h4 className="text-lg font-semibold text-gray-800 mb-4">Products & Services</h4>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Key Products/Services</label>
-          <div className="space-y-2">
-            {companyData.keyProducts.map((product, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="flex-1 p-2 bg-gray-50 rounded border">{product}</span>
-                <button
-                  onClick={() => removeArrayItem(index, 'keyProducts')}
-                  className="text-red-500 hover:text-red-700 p-2"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-            ))}
-            <input
-              type="text"
-              placeholder="Add product or service..."
-              className="input-field"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addArrayItem(e.target.value, 'keyProducts');
-                  e.target.value = '';
-                }
-              }}
-            />
-          </div>
-        </div>
+        <ArrayField
+          items={companyData.keyProducts}
+          onAdd={(item) => addArrayItem(item, 'keyProducts')}
+          onRemove={(index) => removeArrayItem(index, 'keyProducts')}
+          placeholder="Add product or service and press Enter..."
+          icon="fa-box"
+        />
       </div>
 
+      {/* Mission, Vision & Values */}
       <div className="form-section">
         <h4 className="text-lg font-semibold text-gray-800 mb-4">Mission, Vision & Values</h4>
         <div className="space-y-4">
@@ -361,63 +411,82 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Core Values</label>
-            <div className="space-y-2">
-              {companyData.coreValues.map((value, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="flex-1 p-2 bg-gray-50 rounded border">{value}</span>
-                  <button
-                    onClick={() => removeArrayItem(index, 'coreValues')}
-                    className="text-red-500 hover:text-red-700 p-2"
-                  >
-                    <i className="fas fa-times"></i>
-                  </button>
-                </div>
-              ))}
-              <input
-                type="text"
-                placeholder="Add core value..."
-                className="input-field"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addArrayItem(e.target.value, 'coreValues');
-                    e.target.value = '';
-                  }
-                }}
-              />
-            </div>
+            <ArrayField
+              items={companyData.coreValues}
+              onAdd={(item) => addArrayItem(item, 'coreValues')}
+              onRemove={(index) => removeArrayItem(index, 'coreValues')}
+              placeholder="Add core value and press Enter..."
+              icon="fa-heart"
+            />
           </div>
         </div>
       </div>
 
+      {/* Leadership */}
       <div className="form-section">
         <h4 className="text-lg font-semibold text-gray-800 mb-4">Leadership</h4>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Key Executives</label>
-          <div className="space-y-2">
-            {companyData.keyExecutives.map((executive, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="flex-1 p-2 bg-gray-50 rounded border text-sm">{executive}</span>
-                <button
-                  onClick={() => removeArrayItem(index, 'keyExecutives')}
-                  className="text-red-500 hover:text-red-700 p-2"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-            ))}
-            <input
-              type="text"
-              placeholder="Add executive (Name - Title)..."
-              className="input-field"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addArrayItem(e.target.value, 'keyExecutives');
-                  e.target.value = '';
-                }
-              }}
-            />
+        <ArrayField
+          items={companyData.keyExecutives}
+          onAdd={(item) => addArrayItem(item, 'keyExecutives')}
+          onRemove={(index) => removeArrayItem(index, 'keyExecutives')}
+          placeholder="Add executive (Name - Title) and press Enter..."
+          icon="fa-user-tie"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ArrayField({ items, onAdd, onRemove, placeholder, icon }) {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleAdd = () => {
+    if (inputValue.trim()) {
+      onAdd(inputValue);
+      setInputValue('');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div key={index} className="flex items-center gap-2 group">
+          <div className="flex-1 p-2.5 bg-gray-50 rounded border border-gray-200 text-sm flex items-center gap-2">
+            <i className={`fas ${icon} text-gray-400 text-xs`}></i>
+            {item}
           </div>
+          <button
+            onClick={() => onRemove(index)}
+            className="text-gray-300 hover:text-red-500 p-2 transition-colors"
+            title="Remove"
+          >
+            <i className="fas fa-times"></i>
+          </button>
         </div>
+      ))}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={placeholder}
+          className="input-field flex-1"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+        />
+        {inputValue.trim() && (
+          <button
+            onClick={handleAdd}
+            className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+            title="Add"
+          >
+            <i className="fas fa-plus"></i>
+          </button>
+        )}
       </div>
     </div>
   );
