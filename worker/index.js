@@ -242,8 +242,8 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
   "website": "https://... or empty string if unknown",
   "size": "startup | small | medium | large | enterprise",
   "revenue": "e.g. $10M, $500M, $2.1B — or empty string if unknown",
-  "primaryMarket": "united-states | australia | global | other",
-  "businessModel": "b2b | b2c | saas | e-commerce | other",
+  "primaryMarket": "united-states | canada | brazil | mexico | latin-america | united-kingdom | germany | france | spain | italy | netherlands | europe | australia | new-zealand | japan | china | india | south-korea | southeast-asia | uae | saudi-arabia | south-africa | middle-east | africa | global | other",
+  "businessModel": "b2b | b2c | b2b2c | saas | e-commerce | marketplace | franchise | subscription | freemium | d2c | consulting | other",
   "missionStatement": "The company's actual mission statement if publicly known, otherwise empty string",
   "visionStatement": "The company's actual vision statement if publicly known, otherwise empty string",
   "keyProducts": ["Product/Service 1", "Product/Service 2", "Product/Service 3"],
@@ -252,8 +252,8 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 }
 
 Rules for size: startup = 1-10 employees, small = 11-50, medium = 51-200, large = 201-1000, enterprise = 1000+.
-Rules for primaryMarket: use "global" if the company operates in multiple continents, otherwise pick the most relevant one.
-Rules for businessModel: pick the dominant model. Use "other" only if none of the options fit.
+Rules for primaryMarket: use "global" if the company operates in multiple continents, otherwise pick the most specific market from the list above.
+Rules for businessModel: pick the dominant model from the list above. Use "other" only if none of the options fit.
 For headquarters: extract city and country from the Google Places address if available.
 For website: prefer the Google Places website if available.`;
 

@@ -137,13 +137,19 @@ function normalizeSize(size) {
 }
 
 function normalizePrimaryMarket(market) {
-  const valid = ['australia', 'united-states', 'global', 'other'];
+  const valid = [
+    'australia', 'new-zealand', 'united-states', 'canada', 'brazil', 'mexico', 'latin-america',
+    'united-kingdom', 'germany', 'france', 'spain', 'italy', 'netherlands', 'europe',
+    'japan', 'china', 'india', 'south-korea', 'southeast-asia',
+    'uae', 'saudi-arabia', 'south-africa', 'middle-east', 'africa',
+    'global', 'other'
+  ];
   if (valid.includes(market)) return market;
   return '';
 }
 
 function normalizeBusinessModel(model) {
-  const valid = ['b2b', 'b2c', 'saas', 'e-commerce', 'other'];
+  const valid = ['b2b', 'b2c', 'b2b2c', 'saas', 'e-commerce', 'marketplace', 'franchise', 'subscription', 'freemium', 'd2c', 'consulting', 'other'];
   if (valid.includes(model)) return model;
   return '';
 }

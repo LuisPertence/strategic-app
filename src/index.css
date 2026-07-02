@@ -306,7 +306,8 @@ body {
   border-bottom: none;
 }
 
-.search-suggestion-item:hover {
+.search-suggestion-item:hover,
+.search-suggestion-highlighted {
   background-color: #ebf8ff;
 }
 
