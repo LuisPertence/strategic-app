@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { industrySuggestions } from '../data/suggestions';
 
-export default function CompanyInfo({ companyData, setCompanyData, onProductAdded, onProductRemoved, researchCompany }) {
+export default function CompanyInfo({ companyData, setCompanyData, onProductAdded, onProductRemoved, researchCompany, researchSource }) {
   const [showIndustrySuggestions, setShowIndustrySuggestions] = useState(false);
   const [filteredIndustrySuggestions, setFilteredIndustrySuggestions] = useState([]);
   const [isReloading, setIsReloading] = useState(false);
@@ -104,6 +104,29 @@ export default function CompanyInfo({ companyData, setCompanyData, onProductAdde
           ></div>
         </div>
       </div>
+
+      {/* Limited research notice */}
+      {researchSource === 'limited' && (
+        <div className="form-section bg-amber-50 border-amber-300">
+          <div className="flex items-start gap-3">
+            <div className="text-amber-500 mt-0.5">
+              <i className="fas fa-exclamation-triangle text-lg"></i>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-amber-800 mb-1">Limited research data found</h4>
+              <p className="text-sm text-amber-700 mb-2">
+                Automatic research couldn't find detailed information for this company.
+                This typically happens with small, local, or recently founded businesses.
+              </p>
+              <p className="text-sm text-amber-700">
+                You can <strong>fill in the fields manually</strong> below, or set up the
+                AI-powered research proxy (Google Places + Claude) for much better results
+                with businesses of any size.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Google Places info card */}
       {hasPlacesData && (

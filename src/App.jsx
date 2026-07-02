@@ -47,6 +47,7 @@ export default function App() {
   const [swotData, setSwotData] = useLocalStorage('sps-swotData', { strengths: [], weaknesses: [], opportunities: [], threats: [] });
   const [customerSegments, setCustomerSegments] = useLocalStorage('sps-customerSegments', []);
   const [isResearching, setIsResearching] = useState(false);
+  const [researchSource, setResearchSource] = useLocalStorage('sps-researchSource', '');
 
   useEffect(() => {
     if (companyData.industry || companyData.primaryMarket) {
@@ -95,43 +96,44 @@ export default function App() {
   const handleCompanySelected = async (companyName) => {
     setIsResearching(true);
 
+    let realData;
     try {
-      // Fetch real data from Wikipedia/Wikidata
-      const realData = await researchCompanyData(companyName);
-
-      // Use the real industry for generating PESTEL and Porter's data
-      const industry = realData.industry || 'Technology';
-      const companyPestelAnalysis = generateCompanyPestelData(companyName, industry);
-      const generatedCompetitors = generateCompetitors(companyName);
-      const generatedPortersForces = generatePortersForces(industry, realData.primaryMarket || 'global');
-
-      // Set all the data
-      setCompanyData({ ...defaultCompanyData, ...realData });
-      setCompanyPestelData(companyPestelAnalysis);
-      setCompetitors(generatedCompetitors);
-      setPortersForces(generatedPortersForces);
-
-      // Initialize product PESTELs
-      const newProductPestels = {};
-      (realData.keyProducts || []).forEach(product => {
-        const initialProductPestel = {};
-        Object.entries(companyPestelAnalysis).forEach(([category, data]) => {
-          initialProductPestel[category] = {
-            factors: data.factors.map(factor => ({ ...factor })),
-            isCollapsed: false
-          };
-        });
-        newProductPestels[product] = initialProductPestel;
-      });
-      setProductPestels(newProductPestels);
-
-      // Navigate to company info
-      setCurrentPhase('company-info');
+      realData = await researchCompanyData(companyName);
     } catch (error) {
       console.error('Research error:', error);
-    } finally {
-      setIsResearching(false);
+      realData = { name: companyName };
     }
+
+    const filledFields = ['industry', 'description', 'headquarters', 'website', 'size', 'revenue']
+      .filter(f => realData[f]).length;
+    const hasAiData = filledFields >= 3;
+    setResearchSource(hasAiData ? 'ai' : 'limited');
+
+    const industry = realData.industry || 'Technology';
+    const companyPestelAnalysis = generateCompanyPestelData(companyName, industry);
+    const generatedCompetitors = generateCompetitors(companyName);
+    const generatedPortersForces = generatePortersForces(industry, realData.primaryMarket || 'global');
+
+    setCompanyData({ ...defaultCompanyData, ...realData, name: realData.name || companyName });
+    setCompanyPestelData(companyPestelAnalysis);
+    setCompetitors(generatedCompetitors);
+    setPortersForces(generatedPortersForces);
+
+    const newProductPestels = {};
+    (realData.keyProducts || []).forEach(product => {
+      const initialProductPestel = {};
+      Object.entries(companyPestelAnalysis).forEach(([category, data]) => {
+        initialProductPestel[category] = {
+          factors: data.factors.map(factor => ({ ...factor })),
+          isCollapsed: false
+        };
+      });
+      newProductPestels[product] = initialProductPestel;
+    });
+    setProductPestels(newProductPestels);
+
+    setCurrentPhase('company-info');
+    setIsResearching(false);
   };
 
   const handleNewSearch = () => {
@@ -144,6 +146,7 @@ export default function App() {
     setInternalIssues({ strengths: [], weaknesses: [] });
     setSwotData({ strengths: [], weaknesses: [], opportunities: [], threats: [] });
     setCustomerSegments([]);
+    setResearchSource('');
     setCurrentPhase('search');
   };
 
@@ -173,6 +176,7 @@ export default function App() {
             onProductAdded={handleProductAdded}
             onProductRemoved={handleProductRemoved}
             researchCompany={researchCompany}
+            researchSource={researchSource}
           />
         );
       case 'pestel':
